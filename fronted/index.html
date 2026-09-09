@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cancha de Kalipso</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <a href="#" class="logo">Cancha de Kalipso</a>
+            <nav class="nav">
+                <a href="#inicio">Inicio</a>
+                <a href="#canchas">Canchas</a>
+                <a href="#reservar">Reservar</a>
+                <a href="#horarios">Horarios</a>
+                <a href="#contacto">Contacto</a>
+            </nav>
+        </div>
+    </header>
+
+    <section id="inicio" class="hero">
+        <img src="img/hover.jfif" alt="baner de la cancha">
+    </section>
+
+    <section id="canchas" class="canchas">
+        <div class="container">
+            <h2>Nuestras canchas</h2>
+            <div class="grid">
+                <article class="card">
+                    <h3>Cancha 1</h3>
+                    <p>Césped sintético de alta calidad, iluminación LED y medidas reglamentarias.</p>
+                    <span class="precio">$80.000 / hora</span>
+                </article>
+                <article class="card">
+                    <h3>Cancha 2</h3>
+                    <p>Perfecta para partidos amistosos y entrenamientos con familia y amigos.</p>
+                    <span class="precio">$80.000 / hora</span>
+                </article>
+                <article class="card">
+                    <h3>Cancha 3</h3>
+                    <p>Techada, ideal para jugar sin importar el clima.</p>
+                    <span class="precio">$90.000 / hora</span>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section id="reservar" class="reservar">
+        <div class="container">
+            <h2>Reservar cancha</h2>
+            <form class="formulario" id="formReserva">
+                <div class="campo">
+                    <label for="nombre">Nombre completo</label>
+                    <input type="text" id="nombre" name="nombre" required>
+                </div>
+                <div class="campo">
+                    <label for="telefono">Teléfono</label>
+                    <input type="tel" id="telefono" name="telefono" required>
+                </div>
+                <div class="campo">
+                    <label for="cancha">Cancha</label>
+                    <select id="cancha" name="cancha" required>
+                        <option value="">Selecciona una cancha</option>
+                        <option value="cancha1">Cancha 1</option>
+                        <option value="cancha2">Cancha 2</option>
+                        <option value="cancha3">Cancha 3</option>
+                    </select>
+                </div>
+                <div class="campo">
+                    <label for="fecha">Fecha</label>
+                    <input type="date" id="fecha" name="fecha" required>
+                </div>
+                <div class="campo">
+                    <label for="hora">Hora</label>
+                    <select id="hora" name="hora" required>
+                        <option value="">Selecciona una hora</option>
+                        <option value="08:00">08:00</option>
+                        <option value="09:00">09:00</option>
+                        <option value="10:00">10:00</option>
+                        <option value="11:00">11:00</option>
+                        <option value="12:00">12:00</option>
+                        <option value="13:00">13:00</option>
+                        <option value="14:00">14:00</option>
+                        <option value="15:00">15:00</option>
+                        <option value="16:00">16:00</option>
+                        <option value="17:00">17:00</option>
+                        <option value="18:00">18:00</option>
+                        <option value="19:00">19:00</option>
+                        <option value="20:00">20:00</option>
+                        <option value="21:00">21:00</option>
+                        <option value="22:00">22:00</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Confirmar reserva</button>
+            </form>
+        </div>
+    </section>
+
+    <section id="horarios" class="horarios">
+        <div class="container">
+            <h2>Horarios de atención</h2>
+            <ul>
+                <li><strong>Lunes a Viernes:</strong> 8:00 a.m. - 10:00 p.m.</li>
+                <li><strong>Sábados:</strong> 8:00 a.m. - 11:00 p.m.</li>
+                <li><strong>Domingos y festivos:</strong> 9:00 a.m. - 9:00 p.m.</li>
+            </ul>
+        </div>
+    </section>
+
+    <section id="contacto" class="contacto">
+        <div class="container">
+            <h2>Contacto</h2>
+            <p><strong>Dirección:</strong> Calle 123 #45-67</p>
+            <p><strong>Teléfono:</strong> 300 123 4567</p>
+            <p><strong>Correo:</strong> reservas@canchadekalipso.com</p>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 Cancha de Kalipso. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

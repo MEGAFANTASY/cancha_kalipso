@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "7000:80"
+    container_name: cancha_kalipso
