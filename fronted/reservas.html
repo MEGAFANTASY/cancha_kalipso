@@ -3,9 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reservas - Cancha de Kalipso</title>
+    <title>Panel de Reservas - Cancha de Kalipso</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    
+    <header class="header">
+        <div class="container">
+            <a href="index.html" class="logo">Cancha de Kalipso</a>
+            <nav class="nav">
+                <a href="index.html">Inicio</a>
+                <a href="#" id="cerrarSesion">Cerrar sesión</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="panel">
+        <div class="container">
+            <h2>Panel de reservas</h2>
+
+            <section class="resumen">
+                <div class="card resumen-card">
+                    <h3>Total reservas</h3>
+                    <span id="totalReservas">0</span>
+                </div>
+                <div class="card resumen-card">
+                    <h3>Hoy</h3>
+                    <span id="reservasHoy">0</span>
+                </div>
+            </section>
+
+            <section class="tabla-reservas">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Teléfono</th>
+                            <th>Cancha</th>
+                            <th>Fecha</th>
+                            <th>Hora</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaReservasBody">
+                        <tr>
+                            <td colspan="7" class="sin-reservas">No hay reservas registradas.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 Cancha de Kalipso. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="js/app.js"></script>
 </body>
 </html>
