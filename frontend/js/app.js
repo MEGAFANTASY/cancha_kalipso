@@ -213,6 +213,58 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = 'login.html';
         } else {
             cargarReservas();
+            inicializarConfiguracion();
         }
     }
 });
+
+// ===== CONFIGURACIÓN DE GOOGLE SHEETS =====
+
+function inicializarConfiguracion() {
+    const configLink = document.getElementById('configLink');
+    const configSection = document.getElementById('configSection');
+    const formConfig = document.getElementById('formConfig');
+
+    if (!configLink || !configSection || !formConfig) return;
+
+    configLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        const visible = configSection.style.display === 'block';
+        configSection.style.display = visible ? 'none' : 'block';
+        if (!visible) cargarConfiguracion();
+    });
+
+    formConfig.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const url = document.getElementById('gsheetsUrl').value.trim();
+
+        try {
+            const response = await fetch(`${API_URL}/config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ GSHEETS_URL: url })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert('Configuración guardada. La sincronización con Google Sheets comenzará.');
+                configSection.style.display = 'none';
+            } else {
+                alert(data.message || 'Error al guardar configuración');
+            }
+        } catch (error) {
+            console.error('Error al guardar configuración:', error);
+            alert('Error de conexión');
+        }
+    });
+}
+
+async function cargarConfiguracion() {
+    try {
+        const response = await fetch(`${API_URL}/config`);
+        const data = await response.json();
+        document.getElementById('gsheetsUrl').value = data.GSHEETS_URL || '';
+    } catch (error) {
+        console.error('Error al cargar configuración:', error);
+    }
+}

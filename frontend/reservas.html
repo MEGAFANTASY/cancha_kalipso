@@ -12,6 +12,7 @@
             <a href="index.html" class="logo">Cancha de Kalipso</a>
             <nav class="nav">
                 <a href="index.html">Inicio</a>
+                <a href="#" id="configLink">Configuración</a>
                 <a href="#" id="cerrarSesion">Cerrar sesión</a>
             </nav>
         </div>
@@ -20,6 +21,17 @@
     <main class="panel">
         <div class="container">
             <h2>Panel de reservas</h2>
+
+            <section id="configSection" class="admin-usuarios" style="display:none;">
+                <h3>Configuración de Google Sheets</h3>
+                <form id="formConfig" class="formulario">
+                    <div class="campo">
+                        <label for="gsheetsUrl">URL del Web App de Google Apps Script</label>
+                        <input type="url" id="gsheetsUrl" name="gsheetsUrl" placeholder="https://script.google.com/macros/s/.../exec" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Guardar y sincronizar</button>
+                </form>
+            </section>
 
             <section class="resumen">
                 <div class="card resumen-card">

@@ -384,6 +384,25 @@ section h2 {
     color: var(--color-blanco);
 }
 
+.admin-usuarios {
+    background-color: var(--color-blanco);
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: var(--sombra);
+    margin-bottom: 40px;
+}
+
+.admin-usuarios h3 {
+    color: var(--color-secundario);
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.admin-usuarios .campo small {
+    color: #666;
+    font-size: 0.8rem;
+}
+
 .select-estado {
     padding: 8px 12px;
     border: 1px solid #ccc;

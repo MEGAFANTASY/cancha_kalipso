@@ -46,6 +46,14 @@ def inicializar_db():
     except sqlite3.OperationalError:
         conn.execute('ALTER TABLE usuarios ADD COLUMN fecha_modificacion TEXT')
 
+    # Tabla para configuración del sistema
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS configuracion (
+            clave TEXT PRIMARY KEY,
+            valor TEXT NOT NULL
+        );
+    ''')
+
     cursor = conn.execute('SELECT * FROM usuarios WHERE nombre_usuario = ?', ('admin',))
     if cursor.fetchone() is None:
         hashed = bcrypt.hashpw('123'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -59,12 +67,38 @@ def inicializar_db():
     conn.close()
 
 
+def obtener_config(clave, default=''):
+    conn = obtener_conexion()
+    row = conn.execute('SELECT valor FROM configuracion WHERE clave = ?', (clave,)).fetchone()
+    conn.close()
+    return row['valor'] if row else default
+
+
+def guardar_config(clave, valor):
+    conn = obtener_conexion()
+    conn.execute(
+        'INSERT INTO configuracion (clave, valor) VALUES (?, ?) ON CONFLICT(clave) DO UPDATE SET valor = ?',
+        (clave, valor, valor)
+    )
+    conn.commit()
+    conn.close()
+
+
+def gsheet_url():
+    url_env = os.environ.get('GSHEETS_URL', '')
+    if url_env:
+        return url_env
+    return obtener_config('GSHEETS_URL', '')
+
+
 def sincronizar_con_sheets():
-    if not GSHEETS_URL:
+    url = gsheet_url()
+    if not url:
+        print('GSHEETS_URL no configurada. Sincronización omitida.')
         return
 
     try:
-        response = requests.post(GSHEETS_URL, json={
+        response = requests.post(url, json={
             'modo': 'sincronizar',
             'hoja': 'usuarios',
             'datos': listar_usuarios_interno()
@@ -255,7 +289,26 @@ def sincronizar_manual():
 def sincronizacion_periodica():
     while True:
         time.sleep(SYNC_INTERVAL)
-        sincronizar_con_sheets()
+        try:
+            sincronizar_con_sheets()
+        except Exception as e:
+            print('Error en sincronización periódica:', e)
+
+
+@app.route('/api/config', methods=['GET'])
+def obtener_configuracion():
+    return jsonify({
+        'GSHEETS_URL': gsheet_url()
+    })
+
+
+@app.route('/api/config', methods=['POST'])
+def actualizar_configuracion():
+    data = request.get_json()
+    url = data.get('GSHEETS_URL', '').strip()
+    guardar_config('GSHEETS_URL', url)
+    sincronizar_con_sheets()
+    return jsonify({'success': True, 'message': 'Configuración guardada'})
 
 
 # Servir archivos estáticos del frontend
@@ -271,9 +324,8 @@ if __name__ == '__main__':
     inicializar_db()
     sincronizar_con_sheets()
 
-    if GSHEETS_URL:
-        hilo = threading.Thread(target=sincronizacion_periodica, daemon=True)
-        hilo.start()
-        print(f'Sincronización automática cada {SYNC_INTERVAL} segundos activada')
+    hilo = threading.Thread(target=sincronizacion_periodica, daemon=True)
+    hilo.start()
+    print(f'Sincronización automática cada {SYNC_INTERVAL} segundos activada')
 
     app.run(host='0.0.0.0', port=PORT, threaded=True)
