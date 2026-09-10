@@ -1,12 +1,23 @@
-const USUARIO_ADMIN = 'admin';
-const PASSWORD_ADMIN = '123';
+const API_URL = 'http://localhost:7000/api';
 
-function iniciarSesion(usuario, password) {
-    if (usuario === USUARIO_ADMIN && password === PASSWORD_ADMIN) {
-        localStorage.setItem('adminLogueado', 'true');
-        return true;
+async function iniciarSesion(usuario, password) {
+    try {
+        const response = await fetch(`${API_URL}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usuario, password })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            localStorage.setItem('adminLogueado', 'true');
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error al iniciar sesión:', error);
+        return false;
     }
-    return false;
 }
 
 function verificarSesion() {
@@ -84,13 +95,14 @@ function cargarReservas() {
     }).join('');
 }
 
-function manejarLogin(e) {
+async function manejarLogin(e) {
     e.preventDefault();
     const usuario = document.getElementById('usuario').value.trim();
     const password = document.getElementById('password').value;
     const error = document.getElementById('loginError');
 
-    if (iniciarSesion(usuario, password)) {
+    const exito = await iniciarSesion(usuario, password);
+    if (exito) {
         error.textContent = '';
         window.location.href = 'reservas.html';
     } else {
