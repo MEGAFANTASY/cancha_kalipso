@@ -27,31 +27,17 @@
         <nav class="tabs-nav">
             <button class="tab-btn active" data-tab="reservas">Reservas</button>
             <button class="tab-btn" data-tab="consumo">Consumo</button>
+            <button class="tab-btn" data-tab="historial">Historial</button>
         </nav>
 
         <!-- TAB RESERVAS -->
         <section id="tabReservas" class="tab-content active">
             <div class="admin-card">
-                <h2>Gestión de Reservas</h2>
-                <form id="formReservaAdmin" class="formulario-inline">
-                    <input type="hidden" id="idReserva">
-                    <input type="text" id="nombreCliente" placeholder="Nombre del cliente" required>
-                    <input type="text" id="telefonoCliente" placeholder="Teléfono">
-                    <input type="date" id="fechaReserva" required>
-                    <input type="time" id="horaReserva" required>
-                    <input type="number" id="precioReserva" placeholder="Precio" min="0" step="0.01">
-                    <select id="estadoReserva">
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="Confirmada">Confirmada</option>
-                        <option value="Cancelada">Cancelada</option>
-                    </select>
-                    <input type="text" id="notasReserva" placeholder="Notas">
-                    <button type="submit" class="btn-primary">Guardar</button>
-                    <button type="button" class="btn-secondary" id="btnCancelarReserva">Cancelar</button>
-                </form>
+                <h2>Reservas recibidas</h2>
+                <p class="text-muted">Aquí aparecen las reservas hechas por los clientes desde la página web. Solo puedes cambiar el estado.</p>
 
                 <div class="filtros-reservas">
-                    <input type="date" id="filtroFechaReservas">
+                    <input type="date" id="filtroFechaReservas" placeholder="Filtrar por fecha">
                     <button class="btn-secondary" id="btnFiltrarReservas">Filtrar</button>
                     <button class="btn-secondary" id="btnLimpiarFiltroReservas">Limpiar</button>
                 </div>
@@ -59,12 +45,10 @@
                 <table id="tablaReservas" class="admin-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
                             <th>Cliente</th>
                             <th>Teléfono</th>
                             <th>Fecha</th>
                             <th>Hora</th>
-                            <th>Precio</th>
                             <th>Estado</th>
                             <th>Notas</th>
                             <th>Acciones</th>
@@ -124,22 +108,15 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </section>
 
-                <hr>
-
-                <h3>Historial de ventas cerradas</h3>
-                <table id="tablaVentas" class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>ID Venta</th>
-                            <th>Mesa</th>
-                            <th>Subtotal</th>
-                            <th>Inicio</th>
-                            <th>Cierre</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+        <!-- TAB HISTORIAL -->
+        <section id="tabHistorial" class="tab-content">
+            <div class="admin-card">
+                <h2>Historial de ventas</h2>
+                <p class="text-muted">Haz clic en una venta para ver los items vendidos.</p>
+                <div id="historialVentas"></div>
             </div>
         </section>
     </div>

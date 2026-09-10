@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     if (existe('btnConfig')) inicializarConfiguracion();
-    if (existe('formReservaAdmin')) inicializarReservas();
+    if (existe('tablaReservas')) inicializarReservas();
     if (existe('formMesa')) inicializarMesas();
     if (existe('formItem')) inicializarItems();
     if (existe('formCargue')) inicializarCargues();
@@ -48,6 +48,8 @@ function inicializarTabs() {
             $(`tab${capitalize(btn.dataset.tab)}`).classList.add('active');
             if (btn.dataset.tab === 'consumo') {
                 cargarConsumo();
+            } else if (btn.dataset.tab === 'historial') {
+                cargarHistorialVentas();
             }
         });
     });
@@ -154,20 +156,49 @@ function inicializarConfiguracion() {
 }
 
 /* ============== RESERVAS PUBLICAS ================= */
+const HORAS_DISPONIBLES = [];
+for (let h = 8; h <= 22; h++) {
+    for (let m of ['00', '30']) {
+        const horaStr = `${String(h).padStart(2, '0')}:${m}`;
+        if (h === 22 && m === '30') continue;
+        HORAS_DISPONIBLES.push(horaStr);
+    }
+}
+
 function inicializarReservaPublica() {
     if (!existe('formReserva')) return;
 
     const selectHora = $('hora');
-    for (let h = 8; h <= 22; h++) {
-        for (let m of ['00', '30']) {
-            const horaStr = `${String(h).padStart(2)}:${m}`;
-            if (h === 22 && m === '30') continue;
+    selectHora.innerHTML = '<option value="">Selecciona hora</option>';
+
+    function poblarHoras(ocupadas = []) {
+        selectHora.innerHTML = '<option value="">Selecciona hora</option>';
+        HORAS_DISPONIBLES.forEach(hora => {
+            if (ocupadas.includes(hora)) return;
             const opt = document.createElement('option');
-            opt.value = horaStr;
-            opt.textContent = horaStr;
+            opt.value = hora;
+            opt.textContent = hora;
             selectHora.appendChild(opt);
+        });
+    }
+
+    async function actualizarHoras() {
+        const fecha = $('fecha').value;
+        if (!fecha) {
+            poblarHoras([]);
+            return;
+        }
+        try {
+            const r = await fetch(`${API}/horarios_ocupados?fecha=${encodeURIComponent(fecha)}`);
+            const data = await r.json();
+            poblarHoras(data.horas || []);
+        } catch (err) {
+            console.error('Error cargando horarios ocupados', err);
         }
     }
+
+    poblarHoras([]);
+    if (existe('fecha')) $('fecha').addEventListener('change', actualizarHoras);
 
     $('formReserva').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -190,6 +221,7 @@ function inicializarReservaPublica() {
             if (data.success) {
                 alert('¡Reserva registrada! Nos contactaremos contigo.');
                 $('formReserva').reset();
+                actualizarHoras();
             } else {
                 alert(data.message || 'No se pudo registrar la reserva');
             }
@@ -201,38 +233,7 @@ function inicializarReservaPublica() {
 
 /* ============== RESERVAS ADMIN ============== */
 function inicializarReservas() {
-    if (!existe('formReservaAdmin')) return;
-    $('formReservaAdmin').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const payload = {
-            id_reserva: $('idReserva').value ? parseInt($('idReserva').value) : null,
-            nombre_cliente: $('nombreCliente').value.trim(),
-            telefono: $('telefonoCliente').value.trim(),
-            fecha: $('fechaReserva').value,
-            hora: $('horaReserva').value,
-            estado: $('estadoReserva').value,
-            notas: $('notasReserva').value.trim(),
-            precio: parseFloat($('precioReserva').value || 0)
-        };
-        const r = await fetch(`${API}/reservas`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const data = await r.json();
-        if (data.success) {
-            $('formReservaAdmin').reset();
-            $('idReserva').value = '';
-            await cargarReservasAdmin();
-        } else {
-            alert(data.message);
-        }
-    });
-
-    $('btnCancelarReserva').addEventListener('click', () => {
-        $('formReservaAdmin').reset();
-        $('idReserva').value = '';
-    });
+    if (!existe('tablaReservas')) return;
 
     $('btnFiltrarReservas').addEventListener('click', cargarReservasAdmin);
     $('btnLimpiarFiltroReservas').addEventListener('click', () => {
@@ -240,6 +241,38 @@ function inicializarReservas() {
         cargarReservasAdmin();
     });
 }
+
+async function cambiarEstadoReserva(id_reserva, nuevoEstado) {
+    const r = reservasData.find(x => x.id_reserva === id_reserva);
+    if (!r) return;
+    const payload = {
+        id_reserva: r.id_reserva,
+        nombre_cliente: r.nombre_cliente,
+        telefono: r.telefono || '',
+        fecha: r.fecha,
+        hora: r.hora,
+        estado: nuevoEstado,
+        notas: r.notas || '',
+        precio: r.precio || 0
+    };
+    try {
+        const resp = await fetch(`${API}/reservas`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if (data.success) {
+            await cargarReservasAdmin();
+        } else {
+            alert(data.message);
+        }
+    } catch (err) {
+        alert('Error de conexión');
+    }
+}
+
+window.cambiarEstadoReserva = cambiarEstadoReserva;
 
 async function cargarReservasAdmin() {
     if (!existe('tablaReservas')) return;
@@ -257,44 +290,32 @@ async function cargarReservasAdmin() {
 
     filtradas.sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
 
+    if (filtradas.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="7" class="text-center text-muted">No hay reservas para esta fecha.</td>`;
+        tbody.appendChild(tr);
+        return;
+    }
+
     filtradas.forEach(r => {
+        const claseEstado = r.estado === 'Confirmada' ? 'estado-confirmada' : r.estado === 'Cancelada' ? 'estado-cancelada' : 'estado-pendiente';
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${r.id_reserva}</td>
             <td>${escapeHtml(r.nombre_cliente)}</td>
             <td>${escapeHtml(r.telefono || '')}</td>
             <td>${r.fecha}</td>
             <td>${r.hora}</td>
-            <td>$${(r.precio || 0).toFixed(2)}</td>
-            <td>${r.estado}</td>
+            <td class="${claseEstado}">${r.estado}</td>
             <td>${escapeHtml(r.notas || '')}</td>
-            <td>
-                <button class="btn-secondary" onclick="editarReserva(${r.id_reserva})">Editar</button>
-                <button class="btn-danger" onclick="eliminarReserva(${r.id_reserva})">Eliminar</button>
+            <td class="acciones-estado">
+                <button type="button" class="btn btn-primary" onclick="cambiarEstadoReserva(${r.id_reserva}, 'Confirmada')" ${r.estado === 'Confirmada' ? 'disabled' : ''}>Confirmar</button>
+                <button type="button" class="btn btn-secondary" onclick="cambiarEstadoReserva(${r.id_reserva}, 'Pendiente')" ${r.estado === 'Pendiente' ? 'disabled' : ''}>Espera</button>
+                <button type="button" class="btn btn-danger" onclick="cambiarEstadoReserva(${r.id_reserva}, 'Cancelada')" ${r.estado === 'Cancelada' ? 'disabled' : ''}>Cancelar</button>
             </td>
         `;
         tbody.appendChild(tr);
     });
 }
-
-window.editarReserva = async (id) => {
-    const r = reservasData.find(x => x.id_reserva === id);
-    if (!r) return;
-    $('idReserva').value = r.id_reserva;
-    $('nombreCliente').value = r.nombre_cliente;
-    $('telefonoCliente').value = r.telefono || '';
-    $('fechaReserva').value = r.fecha;
-    $('horaReserva').value = r.hora;
-    $('estadoReserva').value = r.estado;
-    $('notasReserva').value = r.notas || '';
-    $('precioReserva').value = r.precio || '';
-};
-
-window.eliminarReserva = async (id) => {
-    if (!confirm('¿Eliminar esta reserva?')) return;
-    await fetch(`${API}/reservas/${id}`, { method: 'DELETE' });
-    await cargarReservasAdmin();
-};
 
 /* ============== MESAS ============== */
 function inicializarMesas() {
@@ -599,10 +620,6 @@ async function cargarConsumo() {
     ventasData = data.ventas;
     ventaItemsData = data.items;
 
-    // Ventas cerradas para historial
-    const r2 = await fetch(`${API}/ventas`);
-    const todasVentas = await r2.json();
-
     renderizarMesas();
     if (ventaActiva) {
         const v = ventasData.find(x => x.id_venta === ventaActiva.id_venta);
@@ -613,7 +630,17 @@ async function cargarConsumo() {
             limpiarCuenta();
         }
     }
-    renderizarHistorialVentas(todasVentas);
+}
+
+async function cargarHistorialVentas() {
+    await Promise.all([cargarMesas(), cargarItems()]);
+
+    const r = await fetch(`${API}/ventas`);
+    const ventas = await r.json();
+    const rItems = await fetch(`${API}/venta_items`);
+    const items = await rItems.json();
+
+    renderizarHistorialVentas(ventas, items);
 }
 
 function renderizarMesas() {
@@ -693,23 +720,65 @@ function limpiarCuenta() {
     $('subtotalCuenta').textContent = '$0.00';
 }
 
-function renderizarHistorialVentas(ventas) {
-    const tbody = $('tablaVentas').querySelector('tbody');
-    tbody.innerHTML = '';
-    const cerradas = ventas.filter(v => v.fecha_cierre).sort((a, b) => (b.fecha_cierre || '').localeCompare(a.fecha_cierre || ''));
+function renderizarHistorialVentas(ventas, items) {
+    if (!existe('historialVentas')) return;
+    const contenedor = $('historialVentas');
+    contenedor.innerHTML = '';
+
+    const cerradas = ventas
+        .filter(v => v.fecha_cierre)
+        .sort((a, b) => (b.fecha_cierre || '').localeCompare(a.fecha_cierre || ''));
+
+    if (cerradas.length === 0) {
+        contenedor.innerHTML = '<p class="text-muted">Aún no hay ventas cerradas.</p>';
+        return;
+    }
+
     cerradas.forEach(v => {
         const mesa = mesasData.find(m => m.id_mesa === v.id_mesa);
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${v.id_venta}</td>
-            <td>${escapeHtml(mesa ? mesa.nombre_mesa : v.id_mesa)}</td>
-            <td>$${(v.subtotal || 0).toFixed(2)}</td>
-            <td>${formatearFecha(v.fecha_inicio_mesa)}</td>
-            <td>${formatearFecha(v.fecha_cierre)}</td>
+        const itemsVenta = items.filter(i => i.id_venta === v.id_venta);
+
+        const div = document.createElement('div');
+        div.className = 'historial-venta';
+        div.innerHTML = `
+            <button type="button" class="historial-venta-header" onclick="toggleHistorialVenta(this)">
+                <span>Venta #${v.id_venta} — ${mesa ? escapeHtml(mesa.nombre_mesa) : 'Mesa #' + v.id_mesa} — $${(v.subtotal || 0).toFixed(2)}</span>
+                <span class="text-muted">${formatearFecha(v.fecha_cierre)} ▸</span>
+            </button>
+            <div class="historial-venta-detalles">
+                <p class="text-muted">Inicio mesa: ${formatearFecha(v.fecha_inicio_mesa)} · Cierre: ${formatearFecha(v.fecha_cierre)}</p>
+                <table class="historial-venta-items">
+                    <thead>
+                        <tr><th>Item</th><th>Cantidad</th><th>Precio</th><th>Total</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
         `;
-        tbody.appendChild(tr);
+
+        const tbody = div.querySelector('tbody');
+        itemsVenta.forEach(i => {
+            const item = itemsData.find(x => x.id_item === i.id_item);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${escapeHtml(item ? item.nombre_item : 'Item #' + i.id_item)}</td>
+                <td>${(i.cantidad || 0).toFixed(2)}</td>
+                <td>$${(i.precio_unitario || 0).toFixed(2)}</td>
+                <td>$${(i.total_linea || 0).toFixed(2)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        contenedor.appendChild(div);
     });
 }
+
+window.toggleHistorialVenta = function(btn) {
+    const detalles = btn.nextElementSibling;
+    detalles.classList.toggle('open');
+    const span = btn.querySelector('span:last-child');
+    span.textContent = detalles.classList.contains('open') ? formatearFecha(btn.dataset.fecha || '') + ' ▼' : formatearFecha(btn.dataset.fecha || '') + ' ▸';
+};
 
 function formatearFecha(fecha) {
     if (!fecha) return '';
