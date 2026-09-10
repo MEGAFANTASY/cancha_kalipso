@@ -439,7 +439,6 @@ def guardar_reserva():
     conn.commit()
     conn.close()
 
-    sincronizar_entidad_con_sheets('reservas')
     return jsonify({'success': True, 'id_reserva': id_r})
 
 
@@ -450,7 +449,6 @@ def eliminar_reserva(id_r):
     conn.commit()
     conn.close()
 
-    sincronizar_entidad_con_sheets('reservas')
     return jsonify({'success': True, 'message': 'Reserva eliminada'})
 
 
@@ -494,7 +492,6 @@ def guardar_mesa():
     conn.commit()
     conn.close()
 
-    sincronizar_entidad_con_sheets('mesas')
     return jsonify({'success': True, 'id_mesa': id_m})
 
 
@@ -505,7 +502,6 @@ def eliminar_mesa(id_m):
     conn.commit()
     conn.close()
 
-    sincronizar_entidad_con_sheets('mesas')
     return jsonify({'success': True, 'message': 'Mesa eliminada'})
 
 
@@ -553,7 +549,6 @@ def guardar_item():
     conn.commit()
     conn.close()
 
-    sincronizar_entidad_con_sheets('items')
     return jsonify({'success': True, 'id_item': id_i})
 
 
@@ -564,7 +559,6 @@ def eliminar_item(id_i):
     conn.commit()
     conn.close()
 
-    sincronizar_entidad_con_sheets('items')
     return jsonify({'success': True, 'message': 'Item eliminado'})
 
 
@@ -616,7 +610,6 @@ def guardar_cargue():
     conn.commit()
     conn.close()
 
-    sincronizar_entidad_con_sheets('cargues')
     return jsonify({'success': True, 'id_cargue': id_c})
 
 
@@ -627,7 +620,6 @@ def eliminar_cargue(id_c):
     conn.commit()
     conn.close()
 
-    sincronizar_entidad_con_sheets('cargues')
     return jsonify({'success': True, 'message': 'Cargue eliminado'})
 
 
@@ -675,7 +667,6 @@ def crear_venta():
     conn.commit()
     conn.close()
 
-    sincronizar_entidad_con_sheets('ventas')
     return jsonify({'success': True, 'id_venta': id_venta})
 
 
@@ -731,9 +722,6 @@ def agregar_item_venta():
     conn.commit()
     conn.close()
 
-    sincronizar_entidad_con_sheets('venta_items')
-    sincronizar_entidad_con_sheets('items')
-    sincronizar_entidad_con_sheets('ventas')
     return jsonify({'success': True})
 
 
@@ -754,7 +742,6 @@ def cerrar_venta(id_venta):
     conn.commit()
     conn.close()
 
-    sincronizar_entidad_con_sheets('ventas')
     return jsonify({'success': True, 'subtotal': total})
 
 
@@ -770,7 +757,6 @@ def actualizar_configuracion():
     data = request.get_json()
     url = data.get('GSHEETS_URL', '').strip()
     guardar_config('GSHEETS_URL', url)
-    sincronizar_todo()
     return jsonify({'success': True, 'message': 'Configuración guardada'})
 
 

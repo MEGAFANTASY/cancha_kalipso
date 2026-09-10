@@ -23,11 +23,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (existe('formMesa')) inicializarMesas();
     if (existe('formItem')) inicializarItems();
     if (existe('formCargue')) inicializarCargues();
-    if (existe('btnNuevaVenta')) inicializarConsumo();
+    if (existe('btnAgregarItemConsumo')) inicializarConsumo();
+    if (existe('formReserva')) inicializarReservaPublica();
 
     const esPanelAdmin = document.querySelector('.admin-container');
-    if (esPanelAdmin && localStorage.getItem('autenticado') !== 'true') {
-        window.location.replace('login.html');
+    if (esPanelAdmin) {
+        if (localStorage.getItem('autenticado') !== 'true') {
+            window.location.replace('login.html');
+            return;
+        }
+        // Cargar datos del panel cuando ya está autenticado
+        cargarDatosIniciales();
     }
 });
 
@@ -103,6 +109,9 @@ function inicializarConfiguracion() {
             const r = await fetch(`${API}/config`);
             const data = await r.json();
             $('gsheetsUrl').value = data.GSHEETS_URL || '';
+            await cargarMesas();
+            await cargarItems();
+            await cargarCargues();
         } catch (err) {
             console.error(err);
         }
@@ -144,7 +153,53 @@ function inicializarConfiguracion() {
     });
 }
 
-/* ============== RESERVAS ============== */
+/* ============== RESERVAS PUBLICAS ================= */
+function inicializarReservaPublica() {
+    if (!existe('formReserva')) return;
+
+    const selectHora = $('hora');
+    for (let h = 8; h <= 22; h++) {
+        for (let m of ['00', '30']) {
+            const horaStr = `${String(h).padStart(2)}:${m}`;
+            if (h === 22 && m === '30') continue;
+            const opt = document.createElement('option');
+            opt.value = horaStr;
+            opt.textContent = horaStr;
+            selectHora.appendChild(opt);
+        }
+    }
+
+    $('formReserva').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            nombre_cliente: $('nombre').value.trim(),
+            telefono: $('telefono').value.trim(),
+            fecha: $('fecha').value,
+            hora: $('hora').value,
+            estado: 'Pendiente',
+            notas: 'Reserva web',
+            precio: 0
+        };
+        try {
+            const r = await fetch(`${API}/reservas`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await r.json();
+            if (data.success) {
+                alert('¡Reserva registrada! Nos contactaremos contigo.');
+                $('formReserva').reset();
+            } else {
+                alert(data.message || 'No se pudo registrar la reserva');
+            }
+        } catch (err) {
+            alert('Error de conexión');
+        }
+    });
+}
+
+/* ============== RESERVAS ADMIN ============== */
 function inicializarReservas() {
     if (!existe('formReservaAdmin')) return;
     $('formReservaAdmin').addEventListener('submit', async (e) => {
@@ -522,6 +577,7 @@ function inicializarConsumo() {
         if (data.success) {
             alert(`Mesa cerrada. Subtotal: $${(data.subtotal || 0).toFixed(2)}`);
             ventaActiva = null;
+            limpiarCuenta();
             await cargarConsumo();
         } else {
             alert(data.message);
