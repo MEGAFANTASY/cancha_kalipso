@@ -3,75 +3,256 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Reservas - Cancha de Kalipso</title>
+    <title>Panel Administrativo - Cancha de Kalipso</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/admin.css">
 </head>
 <body>
-    <header class="header">
-        <div class="container">
-            <a href="index.html" class="logo">Cancha de Kalipso</a>
-            <nav class="nav">
-                <a href="index.html">Inicio</a>
-                <a href="#" id="configLink">Configuración</a>
-                <a href="#" id="cerrarSesion">Cerrar sesión</a>
-            </nav>
-        </div>
-    </header>
 
-    <main class="panel">
-        <div class="container">
-            <h2>Panel de reservas</h2>
+    <!-- PANEL ADMIN -->
+    <div id="adminPanel" class="admin-container">
+        <header class="admin-header">
+            <div class="header-title">
+                <span class="header-brand">Cancha de Kalipso</span>
+                <h1>Panel Administrativo</h1>
+            </div>
+            <div class="header-actions">
+                <button class="btn-secondary" id="btnConfig">⚙ Configuración</button>
+                <button class="btn-secondary" id="btnSincronizar">🔄 Sincronizar</button>
+                <button class="btn-logout" id="btnLogout">Cerrar sesión</button>
+            </div>
+        </header>
 
-            <section id="configSection" class="admin-usuarios" style="display:none;">
-                <h3>Configuración de Google Sheets</h3>
-                <form id="formConfig" class="formulario">
-                    <div class="campo">
-                        <label for="gsheetsUrl">URL del Web App de Google Apps Script</label>
-                        <input type="url" id="gsheetsUrl" name="gsheetsUrl" placeholder="https://script.google.com/macros/s/.../exec" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Guardar y sincronizar</button>
+        <!-- PESTAÑAS PRINCIPALES -->
+        <nav class="tabs-nav">
+            <button class="tab-btn active" data-tab="reservas">Reservas</button>
+            <button class="tab-btn" data-tab="consumo">Consumo</button>
+        </nav>
+
+        <!-- TAB RESERVAS -->
+        <section id="tabReservas" class="tab-content active">
+            <div class="admin-card">
+                <h2>Gestión de Reservas</h2>
+                <form id="formReservaAdmin" class="formulario-inline">
+                    <input type="hidden" id="idReserva">
+                    <input type="text" id="nombreCliente" placeholder="Nombre del cliente" required>
+                    <input type="text" id="telefonoCliente" placeholder="Teléfono">
+                    <input type="date" id="fechaReserva" required>
+                    <input type="time" id="horaReserva" required>
+                    <input type="number" id="precioReserva" placeholder="Precio" min="0" step="0.01">
+                    <select id="estadoReserva">
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="Confirmada">Confirmada</option>
+                        <option value="Cancelada">Cancelada</option>
+                    </select>
+                    <input type="text" id="notasReserva" placeholder="Notas">
+                    <button type="submit" class="btn-primary">Guardar</button>
+                    <button type="reset" class="btn-secondary" id="btnCancelarReserva">Cancelar</button>
                 </form>
-            </section>
 
-            <section class="resumen">
-                <div class="card resumen-card">
-                    <h3>Total reservas</h3>
-                    <span id="totalReservas">0</span>
+                <div class="filtros-reservas">
+                    <input type="date" id="filtroFechaReservas">
+                    <button class="btn-secondary" id="btnFiltrarReservas">Filtrar</button>
+                    <button class="btn-secondary" id="btnLimpiarFiltroReservas">Limpiar</button>
                 </div>
-                <div class="card resumen-card">
-                    <h3>Hoy</h3>
-                    <span id="reservasHoy">0</span>
-                </div>
-            </section>
 
-            <section class="tabla-reservas">
-                <table>
+                <table id="tablaReservas" class="admin-table">
                     <thead>
                         <tr>
-                            <th>Nombre</th>
+                            <th>ID</th>
+                            <th>Cliente</th>
                             <th>Teléfono</th>
-                            <th>Cancha</th>
                             <th>Fecha</th>
                             <th>Hora</th>
+                            <th>Precio</th>
                             <th>Estado</th>
+                            <th>Notas</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="tablaReservasBody">
-                        <tr>
-                            <td colspan="7" class="sin-reservas">No hay reservas registradas.</td>
-                        </tr>
-                    </tbody>
+                    <tbody></tbody>
                 </table>
-            </section>
-        </div>
-    </main>
+            </div>
+        </section>
 
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; 2026 Cancha de Kalipso. Todos los derechos reservados.</p>
+        <!-- TAB CONSUMO -->
+        <section id="tabConsumo" class="tab-content">
+            <div class="admin-card">
+                <h2>Consumo por Mesa (POS)</h2>
+
+                <div class="consumo-layout">
+                    <!-- Panel de selección de mesa -->
+                    <div class="consumo-mesas">
+                        <h3>Selecciona una mesa</h3>
+                        <div id="consumoGridMesas" class="grid-mesas"></div>
+                    </div>
+
+                    <!-- Panel de cuenta activa -->
+                    <div class="consumo-cuenta">
+                        <h3 id="tituloCuenta">Ninguna mesa seleccionada</h3>
+                        <div id="mesaInfo" class="mesa-info"></div>
+
+                        <div id="agregarItemBox" style="display:none;">
+                            <div class="formulario-inline">
+                                <select id="selectItemConsumo"></select>
+                                <input type="number" id="cantidadItemConsumo" placeholder="Cantidad" min="0.1" step="0.1" value="1">
+                                <button type="button" class="btn-primary" id="btnAgregarItemConsumo">Agregar</button>
+                            </div>
+                        </div>
+
+                        <table id="tablaCuenta" class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Cantidad</th>
+                                    <th>Precio</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" class="text-right"><strong>Subtotal</strong></td>
+                                    <td id="subtotalCuenta">$0.00</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <div class="acciones-cuenta">
+                            <button class="btn-primary" id="btnCerrarMesa" disabled>Cerrar mesa</button>
+                            <button class="btn-secondary" id="btnCancelarSeleccion">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <h3>Historial de ventas cerradas</h3>
+                <table id="tablaVentas" class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID Venta</th>
+                            <th>Mesa</th>
+                            <th>Subtotal</th>
+                            <th>Inicio</th>
+                            <th>Cierre</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- MODAL CONFIGURACIÓN -->
+    <div id="configModal" class="modal" style="display:none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>Configuración</h2>
+                <button class="btn-close" id="btnCerrarConfig">×</button>
+            </div>
+
+            <nav class="subtabs-nav">
+                <button class="subtab-btn active" data-subtab="url">URL Google Sheets</button>
+                <button class="subtab-btn" data-subtab="mesas">Mesas</button>
+                <button class="subtab-btn" data-subtab="items">Items</button>
+                <button class="subtab-btn" data-subtab="cargues">Cargues</button>
+            </nav>
+
+            <div class="modal-body">
+                <!-- URL -->
+                <div id="subtabUrl" class="subtab-content active">
+                    <form id="formConfigUrl" class="formulario-vertical">
+                        <label>URL del script de Google Sheets</label>
+                        <input type="url" id="gsheetsUrl" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;">
+                        <button type="submit" class="btn-primary">Guardar URL</button>
+                    </form>
+                </div>
+
+                <!-- MESAS -->
+                <div id="subtabMesas" class="subtab-content">
+                    <form id="formMesa" class="formulario-inline">
+                        <input type="hidden" id="idMesa">
+                        <input type="text" id="nombreMesa" placeholder="Nombre de la mesa" required>
+                        <input type="text" id="ubicacionMesa" placeholder="Ubicación">
+                        <label class="inline-check">
+                            <input type="checkbox" id="activaMesa" checked> Activa
+                        </label>
+                        <button type="submit" class="btn-primary">Guardar Mesa</button>
+                        <button type="reset" class="btn-secondary" id="btnCancelarMesa">Cancelar</button>
+                    </form>
+                    <table id="tablaMesas" class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Ubicación</th>
+                                <th>Activa</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- ITEMS -->
+                <div id="subtabItems" class="subtab-content">
+                    <form id="formItem" class="formulario-inline">
+                        <input type="hidden" id="idItem">
+                        <input type="text" id="nombreItem" placeholder="Nombre del item" required>
+                        <input type="text" id="categoriaItem" placeholder="Categoría">
+                        <input type="number" id="precioItem" placeholder="Precio venta" min="0" step="0.01" required>
+                        <input type="text" id="unidadItem" placeholder="Unidad" value="unidad">
+                        <input type="number" id="stockItem" placeholder="Stock" min="0" step="0.1" value="0">
+                        <button type="submit" class="btn-primary">Guardar Item</button>
+                        <button type="reset" class="btn-secondary" id="btnCancelarItem">Cancelar</button>
+                    </form>
+                    <table id="tablaItems" class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Categoría</th>
+                                <th>Precio</th>
+                                <th>Unidad</th>
+                                <th>Stock</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- CARGUES -->
+                <div id="subtabCargues" class="subtab-content">
+                    <form id="formCargue" class="formulario-inline">
+                        <input type="hidden" id="idCargue">
+                        <select id="itemCargue" required></select>
+                        <input type="number" id="cantidadCargue" placeholder="Cantidad" min="0.1" step="0.1" required>
+                        <input type="number" id="costoCargue" placeholder="Costo unitario" min="0" step="0.01">
+                        <input type="text" id="proveedorCargue" placeholder="Proveedor">
+                        <input type="date" id="fechaCargue">
+                        <button type="submit" class="btn-primary">Guardar Cargue</button>
+                        <button type="reset" class="btn-secondary" id="btnCancelarCargue">Cancelar</button>
+                    </form>
+                    <table id="tablaCargues" class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Item</th>
+                                <th>Cantidad</th>
+                                <th>Costo Unit.</th>
+                                <th>Proveedor</th>
+                                <th>Fecha</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-    </footer>
+    </div>
 
     <script src="js/app.js"></script>
 </body>
