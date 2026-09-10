@@ -419,6 +419,17 @@ def guardar_reserva():
     if not valores.get('fecha') or not valores.get('hora'):
         return jsonify({'success': False, 'message': 'La fecha y hora son obligatorias'}), 400
 
+    # Validar que la fecha/hora no sean pasadas (hora local de Colombia / Bogotá)
+    try:
+        tz_bogota = timezone(timedelta(hours=-5))
+        fecha_hora_str = f"{valores['fecha']}T{valores['hora']}:00"
+        fecha_hora_reserva = datetime.fromisoformat(fecha_hora_str).replace(tzinfo=tz_bogota)
+        ahora = datetime.now(tz_bogota)
+        if fecha_hora_reserva < ahora:
+            return jsonify({'success': False, 'message': 'No puedes reservar en una fecha u hora pasada'}), 400
+    except ValueError:
+        return jsonify({'success': False, 'message': 'Fecha u hora inválida'}), 400
+
     conn = obtener_conexion()
 
     # Validar que no choque con otra reserva activa (no cancelada)

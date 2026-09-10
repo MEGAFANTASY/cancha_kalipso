@@ -158,11 +158,8 @@ function inicializarConfiguracion() {
 /* ============== RESERVAS PUBLICAS ================= */
 const HORAS_DISPONIBLES = [];
 for (let h = 8; h <= 22; h++) {
-    for (let m of ['00', '30']) {
-        const horaStr = `${String(h).padStart(2, '0')}:${m}`;
-        if (h === 22 && m === '30') continue;
-        HORAS_DISPONIBLES.push(horaStr);
-    }
+    const horaStr = `${String(h).padStart(2, '0')}:00`;
+    HORAS_DISPONIBLES.push(horaStr);
 }
 
 function inicializarReservaPublica() {
@@ -182,19 +179,66 @@ function inicializarReservaPublica() {
         });
     }
 
+    function fechaEsHoy(fechaStr) {
+        const hoy = new Date();
+        const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+        return fechaStr === hoyStr;
+    }
+
+    function ahoraEnMinutos() {
+        const ahora = new Date();
+        return ahora.getHours() * 60 + ahora.getMinutes();
+    }
+
     async function actualizarHoras() {
         const fecha = $('fecha').value;
         if (!fecha) {
             poblarHoras([]);
             return;
         }
+
+        // No permitir fechas pasadas
+        const inputFecha = new Date(fecha + 'T00:00:00');
+        const hoy = new Date();
+        hoy.setHours(0,0,0,0);
+        if (inputFecha < hoy) {
+            alert('No puedes reservar en una fecha pasada.');
+            $('fecha').value = '';
+            poblarHoras([]);
+            return;
+        }
+
+        const esHoy = fechaEsHoy(fecha);
+        const ahoraMin = ahoraEnMinutos();
+
         try {
             const r = await fetch(`${API}/horarios_ocupados?fecha=${encodeURIComponent(fecha)}`);
             const data = await r.json();
-            poblarHoras(data.horas || []);
+            const ocupadas = data.horas || [];
+            selectHora.innerHTML = '<option value="">Selecciona hora</option>';
+            HORAS_DISPONIBLES.forEach(hora => {
+                if (ocupadas.includes(hora)) return;
+                // Si es hoy, ocultar horas que ya pasaron o estan en curso
+                if (esHoy) {
+                    const [h, m] = hora.split(':').map(Number);
+                    const horaMin = h * 60 + m;
+                    if (horaMin < ahoraMin) return;
+                }
+                const opt = document.createElement('option');
+                opt.value = hora;
+                opt.textContent = hora;
+                selectHora.appendChild(opt);
+            });
         } catch (err) {
             console.error('Error cargando horarios ocupados', err);
         }
+    }
+
+    // Establecer minimo de fecha a hoy
+    if (existe('fecha')) {
+        const hoy = new Date();
+        const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+        $('fecha').min = hoyStr;
     }
 
     poblarHoras([]);
@@ -202,11 +246,34 @@ function inicializarReservaPublica() {
 
     $('formReserva').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const fecha = $('fecha').value;
+        const hora = $('hora').value;
+
+        // Validar fecha no pasada
+        const inputFecha = new Date(fecha + 'T00:00:00');
+        const hoy = new Date();
+        hoy.setHours(0,0,0,0);
+        if (inputFecha < hoy) {
+            alert('No puedes reservar en una fecha pasada.');
+            return;
+        }
+
+        // Validar hora no pasada si es hoy
+        if (fechaEsHoy(fecha)) {
+            const [h, m] = hora.split(':').map(Number);
+            const horaMin = h * 60 + m;
+            const ahoraMin = ahoraEnMinutos();
+            if (horaMin < ahoraMin) {
+                alert('No puedes reservar en una hora que ya pasó.');
+                return;
+            }
+        }
+
         const payload = {
             nombre_cliente: $('nombre').value.trim(),
             telefono: $('telefono').value.trim(),
-            fecha: $('fecha').value,
-            hora: $('hora').value,
+            fecha,
+            hora,
             estado: 'Pendiente',
             notas: 'Reserva web',
             precio: 0
