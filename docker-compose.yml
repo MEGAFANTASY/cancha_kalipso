@@ -12,3 +12,6 @@ services:
       - DB_PATH=/app/db/usuarios.db
       - PORT=7000
       - FRONTEND_PATH=/app/frontend
+      # Configurar en un archivo .env local (no subir a GitHub)
+      - GSHEETS_URL=${GSHEETS_URL}
+      - SYNC_INTERVAL=30

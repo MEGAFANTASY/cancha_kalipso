@@ -1,0 +1,36 @@
+# Base de datos SQLite
+*.db
+*.sqlite
+*.sqlite3
+
+# Variables de entorno y secretos
+.env
+.env.local
+.env.*.local
+
+# Docker
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Logs
+*.log
+logs/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# IDEs y editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dependencias
+node_modules/
+venv/
+.venv/

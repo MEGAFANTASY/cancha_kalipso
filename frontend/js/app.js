@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:7000/api';
+const API_URL = '/api';
 
 async function iniciarSesion(usuario, password) {
     try {
