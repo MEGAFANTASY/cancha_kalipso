@@ -283,9 +283,15 @@ async function cargarReservasAdmin() {
     const tbody = $('tablaReservas').querySelector('tbody');
     tbody.innerHTML = '';
 
-    let filtradas = reservasData;
+    const ahora = new Date();
+
+    let filtradas = reservasData.filter(r => {
+        const finReserva = new Date(`${r.fecha}T${r.hora}:00`);
+        return finReserva >= ahora;
+    });
+
     if (filtroFecha) {
-        filtradas = reservasData.filter(r => r.fecha === filtroFecha);
+        filtradas = filtradas.filter(r => r.fecha === filtroFecha);
     }
 
     filtradas.sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
