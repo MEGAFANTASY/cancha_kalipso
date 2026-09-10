@@ -1,0 +1,444 @@
+:root {
+    --primary: #1b5e20;
+    --primary-dark: #0d3b10;
+    --primary-light: #2e7d32;
+    --secondary: #66bb6a;
+    --bg: #f4f9f5;
+    --text: #1b1b1b;
+    --text-muted: #5f6b5f;
+    --card: #ffffff;
+    --border: #c8e6c9;
+    --success: #2e7d32;
+    --danger: #c62828;
+    --shadow: rgba(27, 94, 32, 0.12);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+}
+
+/* LOGIN EMBEBIDO */
+.login-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at 20% 30%, rgba(46, 125, 50, 0.25) 0%, transparent 35%),
+        radial-gradient(circle at 80% 70%, rgba(129, 199, 132, 0.2) 0%, transparent 35%),
+        linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+}
+
+.login-box {
+    background: var(--card);
+    padding: 2.5rem;
+    border-radius: 18px;
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.25);
+    text-align: center;
+    width: 380px;
+    border-top: 5px solid var(--primary-light);
+}
+
+.login-box h2.login-brand {
+    margin-bottom: 0.25rem;
+    color: var(--primary);
+    font-weight: 800;
+    font-size: 1.75rem;
+}
+
+.login-box h3 {
+    margin-bottom: 1.5rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.login-box input {
+    display: block;
+    width: 100%;
+    padding: 0.85rem 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    background: var(--bg);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.login-box input:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15);
+}
+
+.login-box .btn-primary {
+    width: 100%;
+}
+
+.error {
+    color: var(--danger);
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    min-height: 1.2rem;
+}
+
+/* ADMIN */
+.admin-container {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.admin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: #fff;
+    padding: 1rem 1.5rem;
+    border-radius: 14px;
+    margin-bottom: 1rem;
+    box-shadow: 0 6px 18px var(--shadow);
+}
+
+.header-title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+}
+
+.header-brand {
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: rgba(255, 255, 255, 0.95);
+    letter-spacing: 0.3px;
+}
+
+.header-title h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+button,
+.btn-primary,
+.btn-secondary,
+.btn-danger,
+.btn-logout {
+    padding: 0.65rem 1.1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: transform 0.15s, background 0.2s, box-shadow 0.2s;
+}
+
+button:hover {
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.25);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+}
+
+.btn-secondary {
+    background: var(--bg);
+    color: var(--primary);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background: #e8f5e9;
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background: #a31818;
+}
+
+.btn-logout {
+    background: rgba(255,255,255,0.18);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.35);
+}
+
+.btn-logout:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+/* PESTAÑAS */
+.tabs-nav, .subtabs-nav {
+    display: flex;
+    gap: 0.25rem;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 1rem;
+}
+
+.tab-btn, .subtab-btn {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 0.8rem 1.2rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    border-radius: 8px 8px 0 0;
+}
+
+.tab-btn:hover, .subtab-btn:hover {
+    background: var(--bg);
+    color: var(--primary);
+}
+
+.tab-btn.active, .subtab-btn.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+    background: #e8f5e9;
+    font-weight: 700;
+}
+
+.tab-content, .subtab-content {
+    display: none;
+}
+
+.tab-content.active, .subtab-content.active {
+    display: block;
+}
+
+/* CARDS Y TABLAS */
+.admin-card {
+    background: var(--card);
+    padding: 1.5rem;
+    border-radius: 14px;
+    box-shadow: 0 4px 16px var(--shadow);
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border);
+}
+
+.admin-card h2, .admin-card h3 {
+    margin-bottom: 1rem;
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.formulario-inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    align-items: center;
+}
+
+.formulario-inline input, .formulario-inline select {
+    padding: 0.65rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    min-width: 120px;
+    background: var(--bg);
+}
+
+.formulario-inline input:focus, .formulario-inline select:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.12);
+}
+
+.formulario-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.inline-check {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.95rem;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.admin-table th, .admin-table td {
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem;
+    text-align: left;
+}
+
+.admin-table th {
+    background: var(--primary);
+    color: #fff;
+    font-weight: 600;
+}
+
+.admin-table tr:nth-child(even) {
+    background: var(--bg);
+}
+
+.admin-table tr:hover {
+    background: #e8f5e9;
+}
+
+.filtros-reservas {
+    display: flex;
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+.text-right {
+    text-align: right;
+}
+
+/* MODAL */
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(13, 59, 16, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: var(--card);
+    border-radius: 14px;
+    width: 95%;
+    max-width: 900px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+    border-top: 5px solid var(--primary-light);
+}
+
+.modal-large {
+    max-width: 1100px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+    color: var(--primary);
+}
+
+.btn-close {
+    background: none;
+    font-size: 1.5rem;
+    color: var(--primary);
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+/* CONSUMO POS */
+.consumo-layout {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 900px) {
+    .consumo-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.grid-mesas {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.75rem;
+}
+
+.card-mesa {
+    background: linear-gradient(135deg, #e8f5e9 0%, var(--bg) 100%);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.card-mesa:hover {
+    border-color: var(--primary-light);
+    box-shadow: 0 6px 14px var(--shadow);
+    transform: translateY(-2px);
+}
+
+.card-mesa.active {
+    border-color: var(--primary);
+    background: #e8f5e9;
+    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.2);
+}
+
+.card-mesa.ocupada {
+    background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%);
+    border-color: var(--primary-light);
+    color: var(--primary-dark);
+}
+
+.mesa-info {
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.acciones-cuenta {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+/* UTILIDADES */
+.hidden {
+    display: none !important;
+}
+
+.success {
+    color: var(--success);
+    font-weight: 600;
+}

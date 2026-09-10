@@ -1,8 +1,15 @@
 services:
-  frontend:
+  app:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "7000:80"
+      - "7000:7000"
     container_name: cancha_kalipso
+    volumes:
+      - ./db:/app/db
+    environment:
+      - DB_PATH=/app/db/usuarios.db
+      - PORT=7000
+      - FRONTEND_PATH=/app/frontend
+      - SYNC_INTERVAL=30
