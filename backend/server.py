@@ -421,9 +421,20 @@ def guardar_reserva():
 
     conn = obtener_conexion()
 
+    # Validar que no choque con otra reserva activa (no cancelada)
+    if valores.get('estado') != 'Cancelada':
+        existente = conn.execute(
+            'SELECT id_reserva FROM reservas WHERE fecha = ? AND hora = ? AND estado != ? AND id_reserva != ?',
+            (valores['fecha'], valores['hora'], 'Cancelada', id_r or 0)
+        ).fetchone()
+        if existente:
+            conn.close()
+            return jsonify({'success': False, 'message': 'Ya existe una reserva activa en esa fecha y hora'}), 409
+
     if id_r:
         row = conn.execute('SELECT * FROM reservas WHERE id_reserva = ?', (id_r,)).fetchone()
         if not row:
+            conn.close()
             return jsonify({'success': False, 'message': 'Reserva no encontrada'}), 404
         sets = ', '.join([f'{c} = ?' for c in valores])
         conn.execute(f'UPDATE reservas SET {sets} WHERE id_reserva = ?', list(valores.values()) + [id_r])
@@ -440,6 +451,20 @@ def guardar_reserva():
     conn.close()
 
     return jsonify({'success': True, 'id_reserva': id_r})
+
+
+@app.route('/api/horarios_ocupados', methods=['GET'])
+def horarios_ocupados():
+    fecha = request.args.get('fecha', '')
+    if not fecha:
+        return jsonify({'horas': []})
+    conn = obtener_conexion()
+    rows = conn.execute(
+        'SELECT hora FROM reservas WHERE fecha = ? AND estado != ?',
+        (fecha, 'Cancelada')
+    ).fetchall()
+    conn.close()
+    return jsonify({'horas': [r['hora'] for r in rows]})
 
 
 @app.route('/api/reservas/<int:id_r>', methods=['DELETE'])

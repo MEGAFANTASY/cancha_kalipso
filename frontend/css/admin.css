@@ -323,6 +323,82 @@ button:hover {
     text-align: right;
 }
 
+.text-muted {
+    color: var(--text-muted);
+}
+
+/* HISTORIAL VENTAS */
+.historial-venta {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+    background: var(--card);
+}
+
+.historial-venta-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.85rem 1rem;
+    background: #e8f5e9;
+    border: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    color: var(--primary-dark);
+    font-weight: 600;
+}
+
+.historial-venta-header:hover {
+    background: #dcedc8;
+}
+
+.historial-venta-detalles {
+    display: none;
+    padding: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.historial-venta-detalles.open {
+    display: block;
+}
+
+.historial-venta-items {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.5rem;
+}
+
+.historial-venta-items th,
+.historial-venta-items td {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}
+
+.historial-venta-items th {
+    background: var(--primary);
+    color: #fff;
+}
+
+/* ESTADOS RESERVAS */
+.estado-pendiente { color: #f9a825; font-weight: 600; }
+.estado-confirmada { color: var(--success); font-weight: 600; }
+.estado-cancelada { color: var(--danger); font-weight: 600; }
+
+.acciones-estado {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.acciones-estado .btn {
+    padding: 0.35rem 0.65rem;
+    font-size: 0.85rem;
+}
+
 /* MODAL */
 .modal {
     position: fixed;
