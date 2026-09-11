@@ -166,6 +166,7 @@
                 <button class="subtab-btn" data-subtab="mesas">Mesas</button>
                 <button class="subtab-btn" data-subtab="items">Items</button>
                 <button class="subtab-btn" data-subtab="cargues">Cargues</button>
+                <button class="subtab-btn" data-subtab="password">Contraseña</button>
             </nav>
 
             <div class="modal-body">
@@ -221,6 +222,20 @@
                         <input type="text" id="webWhatsapp" placeholder="Ej: 573001234567">
 
                         <button type="submit" class="btn-primary" style="margin-top:1rem;">Guardar configuración web</button>
+                    </form>
+                </div>
+
+                <!-- CONTRASEÑA -->
+                <div id="subtabPassword" class="subtab-content">
+                    <form id="formCambiarPassword" class="formulario-vertical">
+                        <h3>Cambiar contraseña del administrador</h3>
+                        <label>Contraseña actual</label>
+                        <input type="password" id="passwordActual" required autocomplete="current-password">
+                        <label>Nueva contraseña</label>
+                        <input type="password" id="passwordNueva" required autocomplete="new-password" minlength="3">
+                        <label>Confirmar nueva contraseña</label>
+                        <input type="password" id="passwordConfirmar" required autocomplete="new-password">
+                        <button type="submit" class="btn-primary" style="margin-top:1rem;">Guardar contraseña</button>
                     </form>
                 </div>
 

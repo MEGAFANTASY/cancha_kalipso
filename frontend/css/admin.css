@@ -276,6 +276,58 @@ button:hover {
     gap: 1rem;
 }
 
+.formulario-vertical label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.35rem;
+}
+
+.formulario-vertical input,
+.formulario-vertical select,
+.formulario-vertical textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 1rem;
+    background: #ffffff;
+    color: var(--text);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.formulario-vertical input:focus,
+.formulario-vertical select:focus,
+.formulario-vertical textarea:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 4px rgba(46, 125, 50, 0.12);
+    transform: translateY(-1px);
+}
+
+.formulario-vertical input::placeholder,
+.formulario-vertical textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+.formulario-vertical h3 {
+    margin-top: 0.5rem;
+    margin-bottom: 0.25rem;
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 1.1rem;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 0.4rem;
+}
+
+.formulario-vertical button[type="submit"],
+.formulario-vertical .btn-primary {
+    align-self: flex-start;
+    margin-top: 0.5rem;
+}
+
 .inline-check {
     display: flex;
     align-items: center;

@@ -363,6 +363,38 @@ def login():
     return jsonify({'success': True, 'usuario': row['nombre_usuario']})
 
 
+@app.route('/api/cambiar_password_admin', methods=['POST'])
+def cambiar_password_admin():
+    data = request.get_json()
+    password_actual = data.get('password_actual', '')
+    password_nueva = data.get('password_nueva', '')
+
+    if not password_actual or not password_nueva:
+        return jsonify({'success': False, 'message': 'Ambas contraseñas son obligatorias'}), 400
+
+    conn = obtener_conexion()
+    row = conn.execute('SELECT * FROM usuarios WHERE nombre_usuario = ?', ('admin',)).fetchone()
+    if row is None:
+        conn.close()
+        return jsonify({'success': False, 'message': 'Usuario admin no encontrado'}), 404
+
+    stored_hash = row['contrasena_usuario'].encode('utf-8')
+    if not bcrypt.checkpw(password_actual.encode('utf-8'), stored_hash):
+        conn.close()
+        return jsonify({'success': False, 'message': 'Contraseña actual incorrecta'}), 401
+
+    hashed = bcrypt.hashpw(password_nueva.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    conn.execute(
+        'UPDATE usuarios SET contrasena_usuario = ?, fecha_modificacion = ? WHERE nombre_usuario = ?',
+        (hashed, ahora_iso(), 'admin')
+    )
+    conn.commit()
+    conn.close()
+
+    sincronizar_entidad_con_sheets('usuarios')
+    return jsonify({'success': True, 'message': 'Contraseña actualizada'})
+
+
 @app.route('/api/usuarios', methods=['GET'])
 def listar_usuarios():
     return jsonify(listar_entidad_interno('usuarios'))

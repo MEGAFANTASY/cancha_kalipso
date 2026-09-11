@@ -190,6 +190,35 @@ function inicializarConfiguracion() {
             }
         });
     }
+
+    if (existe('formCambiarPassword')) {
+        $('formCambiarPassword').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const actual = $('passwordActual').value;
+            const nueva = $('passwordNueva').value;
+            const confirmar = $('passwordConfirmar').value;
+
+            if (nueva !== confirmar) {
+                alert('La nueva contraseña y la confirmación no coinciden');
+                return;
+            }
+
+            try {
+                const r = await fetch(`${API}/cambiar_password_admin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password_actual: actual, password_nueva: nueva })
+                });
+                const data = await r.json();
+                alert(data.message);
+                if (data.success) {
+                    $('formCambiarPassword').reset();
+                }
+            } catch (err) {
+                alert('Error cambiando la contraseña');
+            }
+        });
+    }
 }
 
 async function cargarWebConfig() {
