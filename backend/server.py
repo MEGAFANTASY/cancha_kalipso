@@ -913,28 +913,6 @@ def sincronizar_manual():
     return jsonify({'success': True, 'message': 'Sincronización completada'})
 
 
-@app.route('/api/limpiar_datos', methods=['POST'])
-def limpiar_datos():
-    """Limpia datos de prueba excepto usuarios y configuración."""
-    conn = obtener_conexion()
-    
-    # Orden correcto por foreign keys
-    tablas_limpiar = ['venta_items', 'ventas', 'cargues', 'items', 'mesas', 'reservas']
-    
-    for tabla in tablas_limpiar:
-        conn.execute(f'DELETE FROM {tabla}')
-    
-    # Resetear secuencias de autoincremento
-    conn.execute("DELETE FROM sqlite_sequence WHERE name IN ({})".format(
-        ','.join(['?'] * len(tablas_limpiar))
-    ), tablas_limpiar)
-    
-    conn.commit()
-    conn.close()
-    
-    return jsonify({'success': True, 'message': 'Base de datos limpiada (solo quedan usuarios y configuración)'})
-
-
 @app.route('/api/eventos', methods=['GET'])
 def eventos_sse():
     """Server-Sent Events para notificar cambios en ventas en tiempo real."""
