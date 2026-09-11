@@ -12,9 +12,6 @@ COPY backend /app/backend
 # Copiar frontend
 COPY frontend /app/frontend
 
-# Copiar base de datos (se montará como volumen en runtime)
-COPY db /app/db
-
 EXPOSE 7000
 
 CMD ["python", "/app/backend/server.py"]
