@@ -26,6 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (existe('btnAgregarItemConsumo')) inicializarConsumo();
     if (existe('formReserva')) inicializarReservaPublica();
 
+    conectarSSE();
+
     const esPanelAdmin = document.querySelector('.admin-container');
     if (esPanelAdmin) {
         if (localStorage.getItem('autenticado') !== 'true') {
@@ -50,6 +52,9 @@ function inicializarTabs() {
                 cargarConsumo();
             } else if (btn.dataset.tab === 'historial') {
                 cargarHistorialVentas();
+            } else if (btn.dataset.tab === 'inventario') {
+                inicializarFiltrosInventario();
+                cargarInventario();
             }
         });
     });
@@ -99,8 +104,14 @@ async function cargarDatosIniciales() {
         cargarReservasAdmin(),
         cargarMesas(),
         cargarItems(),
-        cargarCargues()
+        cargarCargues(),
+        cargarVentasAbiertas(),
+        cargarVentaItems()
     ]);
+    // Si estamos en la pestaña de consumo, renderizar mesas
+    if (document.querySelector('.tab-btn[data-tab="consumo"]')?.classList.contains('active')) {
+        renderizarMesas();
+    }
 }
 
 /* ============== CONFIGURACIÓN ============== */
@@ -114,6 +125,10 @@ function inicializarConfiguracion() {
             await cargarMesas();
             await cargarItems();
             await cargarCargues();
+            // Fecha default hoy para cargues
+            if (existe('fechaCargue') && !$('fechaCargue').value) {
+                $('fechaCargue').value = new Date().toISOString().slice(0, 10);
+            }
         } catch (err) {
             console.error(err);
         }
@@ -122,6 +137,21 @@ function inicializarConfiguracion() {
 
     $('btnCerrarConfig').addEventListener('click', () => {
         $('configModal').style.display = 'none';
+    });
+
+    $('btnLimpiarDatos').addEventListener('click', async () => {
+        if (!confirm('⚠️ ¿ELIMINAR TODOS LOS DATOS?\n\nSe borrarán reservas, mesas, items, cargues y ventas.\nLos usuarios se mantienen.\n\nEsta acción no se puede deshacer.')) return;
+        
+        const r = await fetch(`${API}/limpiar_datos`, { method: 'POST' });
+        const data = await r.json();
+        alert(data.message);
+        
+        // Ocultar modal y recargar panel
+        $('configModal').style.display = 'none';
+        await cargarDatosIniciales();
+        if ($('tabConsumo').classList.contains('active')) {
+            cargarConsumo();
+        }
     });
 
     $('formConfigUrl').addEventListener('submit', async (e) => {
@@ -139,30 +169,13 @@ function inicializarConfiguracion() {
             alert('Error guardando URL');
         }
     });
-
-    $('btnSincronizar').addEventListener('click', async () => {
-        try {
-            const r = await fetch(`${API}/sincronizar`, { method: 'POST' });
-            const data = await r.json();
-            alert(data.message);
-            await cargarDatosIniciales();
-            if ($('tabConsumo').classList.contains('active')) {
-                cargarConsumo();
-            }
-        } catch (err) {
-            alert('Error de sincronización');
-        }
-    });
 }
 
 /* ============== RESERVAS PUBLICAS ================= */
 const HORAS_DISPONIBLES = [];
 for (let h = 8; h <= 22; h++) {
-    for (let m of ['00', '30']) {
-        const horaStr = `${String(h).padStart(2, '0')}:${m}`;
-        if (h === 22 && m === '30') continue;
-        HORAS_DISPONIBLES.push(horaStr);
-    }
+    const horaStr = `${String(h).padStart(2, '0')}:00`;
+    HORAS_DISPONIBLES.push(horaStr);
 }
 
 function inicializarReservaPublica() {
@@ -182,19 +195,66 @@ function inicializarReservaPublica() {
         });
     }
 
+    function fechaEsHoy(fechaStr) {
+        const hoy = new Date();
+        const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+        return fechaStr === hoyStr;
+    }
+
+    function ahoraEnMinutos() {
+        const ahora = new Date();
+        return ahora.getHours() * 60 + ahora.getMinutes();
+    }
+
     async function actualizarHoras() {
         const fecha = $('fecha').value;
         if (!fecha) {
             poblarHoras([]);
             return;
         }
+
+        // No permitir fechas pasadas
+        const inputFecha = new Date(fecha + 'T00:00:00');
+        const hoy = new Date();
+        hoy.setHours(0,0,0,0);
+        if (inputFecha < hoy) {
+            alert('No puedes reservar en una fecha pasada.');
+            $('fecha').value = '';
+            poblarHoras([]);
+            return;
+        }
+
+        const esHoy = fechaEsHoy(fecha);
+        const ahoraMin = ahoraEnMinutos();
+
         try {
             const r = await fetch(`${API}/horarios_ocupados?fecha=${encodeURIComponent(fecha)}`);
             const data = await r.json();
-            poblarHoras(data.horas || []);
+            const ocupadas = data.horas || [];
+            selectHora.innerHTML = '<option value="">Selecciona hora</option>';
+            HORAS_DISPONIBLES.forEach(hora => {
+                if (ocupadas.includes(hora)) return;
+                // Si es hoy, ocultar horas que ya pasaron o estan en curso
+                if (esHoy) {
+                    const [h, m] = hora.split(':').map(Number);
+                    const horaMin = h * 60 + m;
+                    if (horaMin < ahoraMin) return;
+                }
+                const opt = document.createElement('option');
+                opt.value = hora;
+                opt.textContent = hora;
+                selectHora.appendChild(opt);
+            });
         } catch (err) {
             console.error('Error cargando horarios ocupados', err);
         }
+    }
+
+    // Establecer minimo de fecha a hoy
+    if (existe('fecha')) {
+        const hoy = new Date();
+        const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+        $('fecha').min = hoyStr;
     }
 
     poblarHoras([]);
@@ -202,11 +262,34 @@ function inicializarReservaPublica() {
 
     $('formReserva').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const fecha = $('fecha').value;
+        const hora = $('hora').value;
+
+        // Validar fecha no pasada
+        const inputFecha = new Date(fecha + 'T00:00:00');
+        const hoy = new Date();
+        hoy.setHours(0,0,0,0);
+        if (inputFecha < hoy) {
+            alert('No puedes reservar en una fecha pasada.');
+            return;
+        }
+
+        // Validar hora no pasada si es hoy
+        if (fechaEsHoy(fecha)) {
+            const [h, m] = hora.split(':').map(Number);
+            const horaMin = h * 60 + m;
+            const ahoraMin = ahoraEnMinutos();
+            if (horaMin < ahoraMin) {
+                alert('No puedes reservar en una hora que ya pasó.');
+                return;
+            }
+        }
+
         const payload = {
             nombre_cliente: $('nombre').value.trim(),
             telefono: $('telefono').value.trim(),
-            fecha: $('fecha').value,
-            hora: $('hora').value,
+            fecha,
+            hora,
             estado: 'Pendiente',
             notas: 'Reserva web',
             precio: 0
@@ -403,8 +486,7 @@ function inicializarItems() {
             nombre_item: $('nombreItem').value.trim(),
             categoria: $('categoriaItem').value.trim(),
             precio_venta: parseFloat($('precioItem').value || 0),
-            unidad: $('unidadItem').value.trim() || 'unidad',
-            stock: parseFloat($('stockItem').value || 0)
+            unidad: $('unidadItem').value.trim() || 'unidad'
         };
         const r = await fetch(`${API}/items`, {
             method: 'POST',
@@ -440,9 +522,9 @@ async function cargarItems() {
             <td>${i.id_item}</td>
             <td>${escapeHtml(i.nombre_item)}</td>
             <td>${escapeHtml(i.categoria || '')}</td>
-            <td>$${(i.precio_venta || 0).toFixed(2)}</td>
+            <td>${formatearPrecio(i.precio_venta)}</td>
             <td>${escapeHtml(i.unidad || 'unidad')}</td>
-            <td>${(i.stock || 0).toFixed(2)}</td>
+            <td>${formatearEntero(i.stock)}</td>
             <td>
                 <button class="btn-secondary" onclick="editarItem(${i.id_item})">Editar</button>
                 <button class="btn-danger" onclick="eliminarItem(${i.id_item})">Eliminar</button>
@@ -454,23 +536,32 @@ async function cargarItems() {
     // Poblar selects de cargues y consumo
     const optCargue = existe('itemCargue') ? $('itemCargue') : null;
     const optConsumo = existe('selectItemConsumo') ? $('selectItemConsumo') : null;
+    const valorCargue = optCargue ? optCargue.value : '';
+    const valorConsumo = optConsumo ? optConsumo.value : '';
     if (optCargue) optCargue.innerHTML = '<option value="">Seleccione item</option>';
     if (optConsumo) optConsumo.innerHTML = '<option value="">Seleccione item</option>';
     itemsData.forEach(i => {
         if (optCargue) {
             const opt1 = document.createElement('option');
             opt1.value = i.id_item;
-            opt1.textContent = `${i.nombre_item} ($${(i.precio_venta || 0).toFixed(2)}) - Stock: ${(i.stock || 0).toFixed(2)}`;
+            opt1.textContent = `${i.nombre_item} (${formatearPrecio(i.precio_venta)}) - Stock: ${formatearEntero(i.stock)}`;
             optCargue.appendChild(opt1);
         }
 
         if (optConsumo) {
             const opt2 = document.createElement('option');
             opt2.value = i.id_item;
-            opt2.textContent = `${i.nombre_item} ($${(i.precio_venta || 0).toFixed(2)})`;
+            opt2.textContent = `${i.nombre_item} (${formatearPrecio(i.precio_venta)})`;
             optConsumo.appendChild(opt2);
         }
     });
+    // Restaurar valores si siguen existiendo
+    if (optCargue && valorCargue && itemsData.some(i => String(i.id_item) === valorCargue)) {
+        optCargue.value = valorCargue;
+    }
+    if (optConsumo && valorConsumo && itemsData.some(i => String(i.id_item) === valorConsumo)) {
+        optConsumo.value = valorConsumo;
+    }
 }
 
 window.editarItem = (id) => {
@@ -481,7 +572,6 @@ window.editarItem = (id) => {
     $('categoriaItem').value = i.categoria || '';
     $('precioItem').value = i.precio_venta || '';
     $('unidadItem').value = i.unidad || 'unidad';
-    $('stockItem').value = i.stock || 0;
 };
 
 window.eliminarItem = async (id) => {
@@ -498,10 +588,10 @@ function inicializarCargues() {
         const payload = {
             id_cargue: $('idCargue').value ? parseInt($('idCargue').value) : null,
             id_item: parseInt($('itemCargue').value),
-            cantidad: parseFloat($('cantidadCargue').value),
+            cantidad: parseInt($('cantidadCargue').value),
             costo_unitario: parseFloat($('costoCargue').value || 0),
             proveedor: $('proveedorCargue').value.trim(),
-            fecha_cargue: $('fechaCargue').value
+            fecha_cargue: $('fechaCargue').value || new Date().toISOString().slice(0, 10)
         };
         const r = await fetch(`${API}/cargues`, {
             method: 'POST',
@@ -512,6 +602,7 @@ function inicializarCargues() {
         if (data.success) {
             $('formCargue').reset();
             $('idCargue').value = '';
+            $('fechaCargue').value = new Date().toISOString().slice(0, 10);
             await cargarCargues();
             await cargarItems();
         } else {
@@ -522,6 +613,7 @@ function inicializarCargues() {
     $('btnCancelarCargue').addEventListener('click', () => {
         $('formCargue').reset();
         $('idCargue').value = '';
+        $('fechaCargue').value = new Date().toISOString().slice(0, 10);
     });
 }
 
@@ -538,8 +630,8 @@ async function cargarCargues() {
         tr.innerHTML = `
             <td>${c.id_cargue}</td>
             <td>${escapeHtml(item ? item.nombre_item : c.id_item)}</td>
-            <td>${(c.cantidad || 0).toFixed(2)}</td>
-            <td>$${(c.costo_unitario || 0).toFixed(2)}</td>
+            <td>${formatearEntero(c.cantidad)}</td>
+            <td>${formatearPrecio(c.costo_unitario)}</td>
             <td>${escapeHtml(c.proveedor || '')}</td>
             <td>${c.fecha_cargue || ''}</td>
             <td>
@@ -577,15 +669,31 @@ function inicializarConsumo() {
             return;
         }
         const id_item = parseInt($('selectItemConsumo').value);
-        const cantidad = parseFloat($('cantidadItemConsumo').value);
+        const cantidad = parseInt($('cantidadItemConsumo').value);
         if (!id_item || !cantidad || cantidad <= 0) {
             alert('Selecciona un item y cantidad válida');
             return;
         }
+
+        // Si es mesa libre, crear la venta primero
+        if (!ventaActiva.id_venta) {
+            const r = await fetch(`${API}/ventas`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id_mesa: ventaActiva.id_mesa })
+            });
+            const data = await r.json();
+            if (!data.success) {
+                alert(data.message);
+                return;
+            }
+            ventaActiva.id_venta = data.id_venta;
+        }
+
         const r = await fetch(`${API}/venta_items`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id_venta: ventaActiva.id_venta, id_item, cantidad })
+            body: JSON.stringify({ id_venta: ventaActiva.id_venta, id_item, cantidad, agregado_por: 'caja' })
         });
         const data = await r.json();
         if (data.success) {
@@ -602,7 +710,7 @@ function inicializarConsumo() {
         const r = await fetch(`${API}/ventas/${ventaActiva.id_venta}/cerrar`, { method: 'POST' });
         const data = await r.json();
         if (data.success) {
-            alert(`Mesa cerrada. Subtotal: $${(data.subtotal || 0).toFixed(2)}`);
+            alert(`Mesa cerrada. Subtotal: ${formatearPrecio(data.subtotal)}`);
             ventaActiva = null;
             limpiarCuenta();
             await cargarConsumo();
@@ -618,22 +726,46 @@ function inicializarConsumo() {
     });
 }
 
-async function cargarConsumo() {
-    await Promise.all([cargarMesas(), cargarItems()]);
-
+async function cargarVentasAbiertas() {
     const r = await fetch(`${API}/ventas_abiertas`);
     const data = await r.json();
     ventasData = data.ventas;
-    ventaItemsData = data.items;
+    return ventasData;
+}
+
+async function cargarVentaItems() {
+    // Solo cargar items de ventas abiertas
+    const r = await fetch(`${API}/ventas_abiertas`);
+    const data = await r.json();
+    ventaItemsData = data.items || [];
+    return ventaItemsData;
+}
+
+async function cargarConsumo() {
+    await Promise.all([cargarMesas(), cargarItems(), cargarVentasAbiertas(), cargarVentaItems()]);
 
     renderizarMesas();
     if (ventaActiva) {
-        const v = ventasData.find(x => x.id_venta === ventaActiva.id_venta);
-        if (v) {
-            renderizarCuenta(v);
+        if (ventaActiva.id_venta) {
+            const v = ventasData.find(x => x.id_venta === ventaActiva.id_venta);
+            if (v) {
+                renderizarCuenta(v);
+            } else {
+                ventaActiva = null;
+                limpiarCuenta();
+            }
         } else {
-            ventaActiva = null;
-            limpiarCuenta();
+            // Mesa libre seleccionada pero sin venta - mantener esa vista
+            const mesa = mesasData.find(m => m.id_mesa === ventaActiva.id_mesa);
+            if (mesa) {
+                limpiarCuenta();
+                $('tituloCuenta').textContent = `Mesa: ${escapeHtml(mesa.nombre_mesa)}`;
+                $('agregarItemBox').style.display = 'block';
+                $('btnCerrarMesa').disabled = true;
+            } else {
+                ventaActiva = null;
+                limpiarCuenta();
+            }
         }
     }
 }
@@ -649,46 +781,141 @@ async function cargarHistorialVentas() {
     renderizarHistorialVentas(ventas, items);
 }
 
+/* ============== INVENTARIO ============== */
+function inicializarFiltrosInventario() {
+    // Poblar select de categorías únicas
+    const selectCat = $('filtroCategoriaInventario');
+    if (selectCat) {
+        const categorias = [...new Set(itemsData.map(i => i.categoria).filter(Boolean))].sort();
+        selectCat.innerHTML = '<option value="">Todas las categorías</option>';
+        categorias.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            selectCat.appendChild(opt);
+        });
+    }
+
+    // Eventos de filtro
+    if (existe('filtroNombreInventario')) {
+        $('filtroNombreInventario').addEventListener('input', cargarInventario);
+    }
+    if (existe('filtroCategoriaInventario')) {
+        $('filtroCategoriaInventario').addEventListener('change', cargarInventario);
+    }
+    if (existe('btnLimpiarFiltrosInventario')) {
+        $('btnLimpiarFiltrosInventario').addEventListener('click', () => {
+            $('filtroNombreInventario').value = '';
+            $('filtroCategoriaInventario').value = '';
+            cargarInventario();
+        });
+    }
+}
+
+async function cargarInventario() {
+    if (!existe('tablaInventario')) return;
+
+    await Promise.all([cargarItems(), cargarCargues()]);
+
+    const r = await fetch(`${API}/venta_items`);
+    const ventaItems = await r.json();
+
+    // Sumar cantidades vendidas por item
+    const vendidoPorItem = {};
+    ventaItems.forEach(vi => {
+        const id = Number(vi.id_item);
+        vendidoPorItem[id] = (vendidoPorItem[id] || 0) + (parseInt(vi.cantidad) || 0);
+    });
+
+    // Calcular costo promedio ponderado y total cargado por item
+    const cargadoPorItem = {};
+    const costoTotalPorItem = {};
+    carguesData.forEach(c => {
+        const id = Number(c.id_item);
+        const cantidad = parseInt(c.cantidad) || 0;
+        const costo = Number(c.costo_unitario) || 0;
+        cargadoPorItem[id] = (cargadoPorItem[id] || 0) + cantidad;
+        costoTotalPorItem[id] = (costoTotalPorItem[id] || 0) + (cantidad * costo);
+    });
+
+    const tbody = $('tablaInventario').querySelector('tbody');
+    tbody.innerHTML = '';
+
+    // Aplicar filtros
+    const filtroNombre = ($('filtroNombreInventario')?.value || '').toLowerCase();
+    const filtroCategoria = $('filtroCategoriaInventario')?.value || '';
+
+    const itemsFiltrados = itemsData.filter(i => {
+        const nombre = (i.nombre_item || '').toLowerCase();
+        const categoria = i.categoria || '';
+        return nombre.includes(filtroNombre) && (!filtroCategoria || categoria === filtroCategoria);
+    });
+
+    if (itemsFiltrados.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="6" class="text-center text-muted">No hay items que coincidan con los filtros.</td>';
+        tbody.appendChild(tr);
+        return;
+    }
+
+    itemsFiltrados.forEach(i => {
+        const id = i.id_item;
+        const cargado = cargadoPorItem[id] || 0;
+        const vendido = vendidoPorItem[id] || 0;
+        const stockActual = i.stock !== undefined ? i.stock : (cargado - vendido);
+        const costoPromedio = cargado > 0 ? (costoTotalPorItem[id] || 0) / cargado : 0;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${escapeHtml(i.nombre_item)}</td>
+            <td>${escapeHtml(i.categoria || '')}</td>
+            <td>${formatearEntero(cargado)}</td>
+            <td>${formatearEntero(vendido)}</td>
+            <td><strong>${formatearEntero(stockActual)}</strong> ${escapeHtml(i.unidad || '')}</td>
+            <td>${formatearPrecio(costoPromedio)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
 function renderizarMesas() {
     const grid = $('consumoGridMesas');
     grid.innerHTML = '';
     mesasData.filter(m => m.activa).forEach(m => {
         const ventaAbierta = ventasData.find(v => v.id_mesa === m.id_mesa);
         const div = document.createElement('div');
-        div.className = `card-mesa ${ventaAbierta ? 'ocupada' : ''} ${ventaActiva && ventaActiva.id_mesa === m.id_mesa ? 'active' : ''}`;
+        const esSeleccionada = ventaActiva && ventaActiva.id_mesa === m.id_mesa;
+        div.className = `card-mesa ${ventaAbierta ? 'ocupada' : ''} ${esSeleccionada ? 'active' : ''}`;
         div.innerHTML = `
             
             <strong>${escapeHtml(m.nombre_mesa)}</strong>
-            <div>${ventaAbierta ? 'Ocupada' : 'Libre'}</div>
+            <div>${ventaAbierta ? 'Ocupada' : (esSeleccionada ? 'Seleccionada' : 'Libre')}</div>
         `;
-        div.addEventListener('click', async () => {
-            await seleccionarMesa(m.id_mesa, ventaAbierta);
+        div.addEventListener('click', () => {
+            seleccionarMesa(m.id_mesa, ventaAbierta);
         });
         grid.appendChild(div);
     });
 }
 
-async function seleccionarMesa(id_mesa, ventaAbierta) {
+function seleccionarMesa(id_mesa, ventaAbierta) {
     if (ventaActiva && ventaActiva.id_mesa === id_mesa) return;
 
     if (ventaAbierta) {
+        // Seleccionar venta ya existente
         ventaActiva = { id_venta: ventaAbierta.id_venta, id_mesa };
+        renderizarMesas();
+        const v = ventasData.find(x => x.id_venta === ventaAbierta.id_venta);
+        if (v) renderizarCuenta(v);
     } else {
-        // Crear nueva venta abierta
-        const r = await fetch(`${API}/ventas`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id_mesa })
-        });
-        const data = await r.json();
-        if (!data.success) {
-            alert(data.message);
-            return;
-        }
-        ventaActiva = { id_venta: data.id_venta, id_mesa };
+        // Seleccionar mesa libre sin crear venta aún
+        ventaActiva = { id_venta: null, id_mesa };
+        renderizarMesas();
+        limpiarCuenta();
+        $('tituloCuenta').textContent = 'Agrega productos para abrir cuenta';
+        $('agregarItemBox').style.display = 'block';
+        $('btnCerrarMesa').disabled = true;
     }
-
-    await cargarConsumo();
 }
 
 function renderizarCuenta(venta) {
@@ -708,13 +935,14 @@ function renderizarCuenta(venta) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${escapeHtml(item ? item.nombre_item : 'Item #' + i.id_item)}</td>
-            <td>${(i.cantidad || 0).toFixed(2)}</td>
-            <td>$${(i.precio_unitario || 0).toFixed(2)}</td>
-            <td>$${(i.total_linea || 0).toFixed(2)}</td>
+            <td>${formatearEntero(i.cantidad)}</td>
+            <td>${formatearPrecio(i.precio_unitario)}</td>
+            <td>${formatearPrecio(i.total_linea)}</td>
+            <td class="text-center"><span class="badge-${(i.agregado_por || 'caja').toLowerCase()}" title="Agregado por ${escapeHtml(i.agregado_por || 'caja')}">${escapeHtml(i.agregado_por || 'caja')}</span></td>
         `;
         tbody.appendChild(tr);
     });
-    $('subtotalCuenta').textContent = `$${subtotal.toFixed(2)}`;
+    $('subtotalCuenta').textContent = formatearPrecio(subtotal);
 }
 
 function limpiarCuenta() {
@@ -748,7 +976,7 @@ function renderizarHistorialVentas(ventas, items) {
         div.className = 'historial-venta';
         div.innerHTML = `
             <button type="button" class="historial-venta-header" onclick="toggleHistorialVenta(this)">
-                <span>Venta #${v.id_venta} — ${mesa ? escapeHtml(mesa.nombre_mesa) : 'Mesa #' + v.id_mesa} — $${(v.subtotal || 0).toFixed(2)}</span>
+                <span>Venta #${v.id_venta} — ${mesa ? escapeHtml(mesa.nombre_mesa) : 'Mesa #' + v.id_mesa} — ${formatearPrecio(v.subtotal)}</span>
                 <span class="text-muted">${formatearFecha(v.fecha_cierre)} ▸</span>
             </button>
             <div class="historial-venta-detalles">
@@ -768,9 +996,9 @@ function renderizarHistorialVentas(ventas, items) {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${escapeHtml(item ? item.nombre_item : 'Item #' + i.id_item)}</td>
-                <td>${(i.cantidad || 0).toFixed(2)}</td>
-                <td>$${(i.precio_unitario || 0).toFixed(2)}</td>
-                <td>$${(i.total_linea || 0).toFixed(2)}</td>
+                <td>${formatearEntero(i.cantidad)}</td>
+                <td>${formatearPrecio(i.precio_unitario)}</td>
+                <td>${formatearPrecio(i.total_linea)}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -790,6 +1018,63 @@ function formatearFecha(fecha) {
     if (!fecha) return '';
     const d = new Date(fecha);
     return d.toLocaleString('es-CO');
+}
+
+function conectarSSE() {
+    if (typeof EventSource === 'undefined') return;
+    let sse = null;
+    const connect = () => {
+        if (sse) sse.close();
+        sse = new EventSource(`${API}/eventos`);
+        sse.onmessage = (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                if (data.evento === 'ventas_actualizadas') {
+                    refrescarDatosVenta();
+                }
+            } catch (err) {
+                console.error('SSE parse error:', err);
+            }
+        };
+        sse.onerror = () => {
+            if (sse) sse.close();
+            setTimeout(connect, 5000);
+        };
+    };
+    connect();
+}
+
+async function refrescarDatosVenta() {
+    await cargarVentasAbiertas();
+    await cargarVentaItems();
+    renderizarMesas();
+    if (ventaActiva) {
+        if (ventaActiva.id_venta) {
+            const v = ventasData.find(x => x.id_venta === ventaActiva.id_venta);
+            if (v) {
+                renderizarCuenta(v);
+            } else {
+                limpiarCuenta();
+                ventaActiva = null;
+                renderizarMesas();
+            }
+        } else {
+            // Mesa seleccionada pero sin venta aún - no hacer nada, mantener estado
+            const mesa = mesasData.find(m => m.id_mesa === ventaActiva.id_mesa);
+            if (!mesa) {
+                ventaActiva = null;
+                limpiarCuenta();
+            }
+        }
+    }
+}
+
+function formatearEntero(n) {
+    return Math.round(Number(n) || 0).toLocaleString('es-CO');
+}
+
+function formatearPrecio(n) {
+    return '$' + (Number(n) || 0).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function escapeHtml(text) {

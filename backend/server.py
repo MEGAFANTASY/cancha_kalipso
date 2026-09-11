@@ -1,15 +1,35 @@
 import os
+import json
 import sqlite3
 import bcrypt
 import requests
 import threading
 import time
+import queue
 from datetime import datetime, timezone, timedelta
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
 from flask_cors import CORS
+import queue
 
 app = Flask(__name__)
 CORS(app)
+
+# Clientes conectados a Server-Sent Events para notificaciones en tiempo real
+sse_clientes = []
+
+
+def notificar_cambio_ventas():
+    """Notifica a todos los clientes SSE que hubo cambios en ventas."""
+    muertos = []
+    for cliente in sse_clientes:
+        try:
+            cliente.put_nowait({'evento': 'ventas_actualizadas'})
+        except queue.Full:
+            muertos.append(cliente)
+    for cliente in muertos:
+        if cliente in sse_clientes:
+            sse_clientes.remove(cliente)
+
 
 PORT = int(os.environ.get('PORT', 7000))
 DB_PATH = os.environ.get('DB_PATH', os.path.join(os.path.dirname(__file__), '..', 'db', 'usuarios.db'))
@@ -44,7 +64,7 @@ ENTIDADES = {
     },
     'venta_items': {
         'pk': 'id_venta_item',
-        'columnas': ['id_venta_item', 'id_venta', 'id_item', 'cantidad', 'precio_unitario', 'total_linea', 'fecha_modificacion']
+        'columnas': ['id_venta_item', 'id_venta', 'id_item', 'cantidad', 'precio_unitario', 'total_linea', 'agregado_por', 'fecha_modificacion']
     }
 }
 
@@ -153,11 +173,17 @@ def inicializar_db():
             cantidad REAL NOT NULL,
             precio_unitario REAL DEFAULT 0,
             total_linea REAL DEFAULT 0,
+            agregado_por TEXT DEFAULT 'caja',
             fecha_modificacion TEXT,
             FOREIGN KEY (id_venta) REFERENCES ventas(id_venta),
             FOREIGN KEY (id_item) REFERENCES items(id_item)
         );
     ''')
+
+    try:
+        conn.execute('SELECT agregado_por FROM venta_items LIMIT 1')
+    except sqlite3.OperationalError:
+        conn.execute('ALTER TABLE venta_items ADD COLUMN agregado_por TEXT DEFAULT "caja"')
 
     cursor = conn.execute('SELECT * FROM usuarios WHERE nombre_usuario = ?', ('admin',))
     if cursor.fetchone() is None:
@@ -419,6 +445,17 @@ def guardar_reserva():
     if not valores.get('fecha') or not valores.get('hora'):
         return jsonify({'success': False, 'message': 'La fecha y hora son obligatorias'}), 400
 
+    # Validar que la fecha/hora no sean pasadas (hora local de Colombia / Bogotá)
+    try:
+        tz_bogota = timezone(timedelta(hours=-5))
+        fecha_hora_str = f"{valores['fecha']}T{valores['hora']}:00"
+        fecha_hora_reserva = datetime.fromisoformat(fecha_hora_str).replace(tzinfo=tz_bogota)
+        ahora = datetime.now(tz_bogota)
+        if fecha_hora_reserva < ahora:
+            return jsonify({'success': False, 'message': 'No puedes reservar en una fecha u hora pasada'}), 400
+    except ValueError:
+        return jsonify({'success': False, 'message': 'Fecha u hora inválida'}), 400
+
     conn = obtener_conexion()
 
     # Validar que no choque con otra reserva activa (no cancelada)
@@ -541,7 +578,7 @@ def listar_items():
 def guardar_item():
     data = request.get_json()
     id_i = data.get('id_item')
-    campos = ['nombre_item', 'categoria', 'precio_venta', 'unidad', 'stock']
+    campos = ['nombre_item', 'categoria', 'precio_venta', 'unidad']
     valores = {c: data.get(c) for c in campos}
     valores['fecha_modificacion'] = data.get('fecha_modificacion') or ahora_iso()
 
@@ -550,9 +587,8 @@ def guardar_item():
 
     try:
         valores['precio_venta'] = float(valores.get('precio_venta') or 0)
-        valores['stock'] = float(valores.get('stock') or 0)
     except (ValueError, TypeError):
-        return jsonify({'success': False, 'message': 'Precio y stock deben ser números'}), 400
+        return jsonify({'success': False, 'message': 'Precio debe ser número'}), 400
 
     conn = obtener_conexion()
 
@@ -563,11 +599,13 @@ def guardar_item():
         sets = ', '.join([f'{c} = ?' for c in valores])
         conn.execute(f'UPDATE items SET {sets} WHERE id_item = ?', list(valores.values()) + [id_i])
     else:
-        cols = list(valores.keys())
-        placeholders = ','.join(['?' for _ in cols])
+        # Insertar con stock inicial 0
+        campos_insert = list(valores.keys()) + ['stock']
+        valores_insert = list(valores.values()) + [0]
+        placeholders = ','.join(['?' for _ in campos_insert])
         cursor = conn.execute(
-            f"INSERT INTO items ({', '.join(cols)}) VALUES ({placeholders})",
-            list(valores.values())
+            f"INSERT INTO items ({', '.join(campos_insert)}) VALUES ({placeholders})",
+            valores_insert
         )
         id_i = cursor.lastrowid
 
@@ -585,6 +623,22 @@ def eliminar_item(id_i):
     conn.close()
 
     return jsonify({'success': True, 'message': 'Item eliminado'})
+
+
+def recalcular_stock_item(conn, id_item):
+    """Recalcula el stock de un item desde cero: total cargues - total vendido."""
+    cargado = conn.execute(
+        'SELECT COALESCE(SUM(cantidad), 0) FROM cargues WHERE id_item = ?',
+        (id_item,)
+    ).fetchone()[0]
+    vendido = conn.execute(
+        'SELECT COALESCE(SUM(cantidad), 0) FROM venta_items WHERE id_item = ?',
+        (id_item,)
+    ).fetchone()[0]
+    conn.execute(
+        'UPDATE items SET stock = ?, fecha_modificacion = ? WHERE id_item = ?',
+        (cargado - vendido, ahora_iso(), id_item)
+    )
 
 
 # ===== CARGUES =====
@@ -606,7 +660,7 @@ def guardar_cargue():
         return jsonify({'success': False, 'message': 'Item y cantidad son obligatorios'}), 400
 
     try:
-        valores['cantidad'] = float(valores.get('cantidad'))
+        valores['cantidad'] = int(valores.get('cantidad'))
         valores['costo_unitario'] = float(valores.get('costo_unitario') or 0)
         valores['id_item'] = int(valores.get('id_item'))
     except (ValueError, TypeError):
@@ -632,6 +686,9 @@ def guardar_cargue():
         )
         id_c = cursor.lastrowid
 
+    # Recalcular stock del item desde cero
+    recalcular_stock_item(conn, valores['id_item'])
+
     conn.commit()
     conn.close()
 
@@ -641,7 +698,12 @@ def guardar_cargue():
 @app.route('/api/cargues/<int:id_c>', methods=['DELETE'])
 def eliminar_cargue(id_c):
     conn = obtener_conexion()
+    # Obtener cargue para saber qué item recalcular
+    row = conn.execute('SELECT id_item FROM cargues WHERE id_cargue = ?', (id_c,)).fetchone()
+    id_item = row['id_item'] if row else None
     conn.execute('DELETE FROM cargues WHERE id_cargue = ?', (id_c,))
+    if id_item:
+        recalcular_stock_item(conn, id_item)
     conn.commit()
     conn.close()
 
@@ -666,12 +728,70 @@ def ventas_abiertas():
     ventas = conn.execute(
         "SELECT * FROM ventas WHERE fecha_cierre IS NULL OR fecha_cierre = '' ORDER BY id_venta"
     ).fetchall()
+    ids_ventas = tuple(v['id_venta'] for v in ventas) if ventas else (0,)
     items = conn.execute(
-        "SELECT * FROM venta_items WHERE id_venta IN (SELECT id_venta FROM ventas WHERE fecha_cierre IS NULL OR fecha_cierre = '')"
+        f"SELECT * FROM venta_items WHERE id_venta IN ({','.join('?' for _ in ids_ventas)})",
+        ids_ventas
     ).fetchall()
     conn.close()
     return jsonify({
         'ventas': [dict(v) for v in ventas],
+        'items': [dict(i) for i in items]
+    })
+
+
+@app.route('/api/venta_mesa', methods=['GET'])
+def venta_mesa():
+    """Devuelve la venta abierta de una mesa específica con sus items."""
+    id_mesa = request.args.get('id_mesa', type=int)
+    if not id_mesa:
+        return jsonify({'success': False, 'message': 'id_mesa requerido'}), 400
+
+    conn = obtener_conexion()
+    venta = conn.execute(
+        "SELECT * FROM ventas WHERE id_mesa = ? AND (fecha_cierre IS NULL OR fecha_cierre = '')",
+        (id_mesa,)
+    ).fetchone()
+
+    if not venta:
+        conn.close()
+        return jsonify({'success': True, 'venta': None, 'items': []})
+
+    items = conn.execute(
+        'SELECT * FROM venta_items WHERE id_venta = ?',
+        (venta['id_venta'],)
+    ).fetchall()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'venta': dict(venta),
+        'items': [dict(i) for i in items]
+    })
+
+
+@app.route('/api/venta_abierta/<int:id_venta>', methods=['GET'])
+def venta_abierta(id_venta):
+    """Devuelve una venta abierta específica con sus items."""
+    conn = obtener_conexion()
+    venta = conn.execute(
+        "SELECT * FROM ventas WHERE id_venta = ? AND (fecha_cierre IS NULL OR fecha_cierre = '')",
+        (id_venta,)
+    ).fetchone()
+
+    if not venta:
+        conn.close()
+        return jsonify({'success': False, 'message': 'Venta no encontrada o ya cerrada'}), 404
+
+    items = conn.execute(
+        'SELECT * FROM venta_items WHERE id_venta = ?',
+        (id_venta,)
+    ).fetchall()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'venta': dict(venta),
         'items': [dict(i) for i in items]
     })
 
@@ -692,6 +812,8 @@ def crear_venta():
     conn.commit()
     conn.close()
 
+    notificar_cambio_ventas()
+
     return jsonify({'success': True, 'id_venta': id_venta})
 
 
@@ -706,7 +828,7 @@ def agregar_item_venta():
         return jsonify({'success': False, 'message': 'Venta, item y cantidad son obligatorios'}), 400
 
     try:
-        cantidad = float(cantidad)
+        cantidad = int(cantidad)
         id_venta = int(id_venta)
         id_item = int(id_item)
     except (ValueError, TypeError):
@@ -714,28 +836,24 @@ def agregar_item_venta():
 
     conn = obtener_conexion()
 
-    # Verificar stock
+    # Verificar que el item existe
     item = conn.execute('SELECT * FROM items WHERE id_item = ?', (id_item,)).fetchone()
     if not item:
         return jsonify({'success': False, 'message': 'Item no encontrado'}), 404
 
-    if item['stock'] < cantidad:
-        return jsonify({'success': False, 'message': 'Stock insuficiente'}), 400
+    # Sin validación de stock - permite vender en negativo
 
     precio_unitario = float(item['precio_venta'])
     total_linea = precio_unitario * cantidad
+    agregado_por = data.get('agregado_por', 'caja')
 
     conn.execute(
-        'INSERT INTO venta_items (id_venta, id_item, cantidad, precio_unitario, total_linea, fecha_modificacion) VALUES (?, ?, ?, ?, ?, ?)',
-        (id_venta, id_item, cantidad, precio_unitario, total_linea, ahora_iso())
+        'INSERT INTO venta_items (id_venta, id_item, cantidad, precio_unitario, total_linea, agregado_por, fecha_modificacion) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        (id_venta, id_item, cantidad, precio_unitario, total_linea, agregado_por, ahora_iso())
     )
 
-    # Descontar stock
-    nuevo_stock = item['stock'] - cantidad
-    conn.execute(
-        'UPDATE items SET stock = ?, fecha_modificacion = ? WHERE id_item = ?',
-        (nuevo_stock, ahora_iso(), id_item)
-    )
+    # Recalcular stock del item desde cero
+    recalcular_stock_item(conn, id_item)
 
     # Recalcular subtotal de la venta
     total = conn.execute('SELECT SUM(total_linea) FROM venta_items WHERE id_venta = ?', (id_venta,)).fetchone()[0] or 0
@@ -746,6 +864,8 @@ def agregar_item_venta():
 
     conn.commit()
     conn.close()
+
+    notificar_cambio_ventas()
 
     return jsonify({'success': True})
 
@@ -766,6 +886,8 @@ def cerrar_venta(id_venta):
     )
     conn.commit()
     conn.close()
+
+    notificar_cambio_ventas()
 
     return jsonify({'success': True, 'subtotal': total})
 
@@ -789,6 +911,51 @@ def actualizar_configuracion():
 def sincronizar_manual():
     sincronizar_todo()
     return jsonify({'success': True, 'message': 'Sincronización completada'})
+
+
+@app.route('/api/limpiar_datos', methods=['POST'])
+def limpiar_datos():
+    """Limpia datos de prueba excepto usuarios y configuración."""
+    conn = obtener_conexion()
+    
+    # Orden correcto por foreign keys
+    tablas_limpiar = ['venta_items', 'ventas', 'cargues', 'items', 'mesas', 'reservas']
+    
+    for tabla in tablas_limpiar:
+        conn.execute(f'DELETE FROM {tabla}')
+    
+    # Resetear secuencias de autoincremento
+    conn.execute("DELETE FROM sqlite_sequence WHERE name IN ({})".format(
+        ','.join(['?'] * len(tablas_limpiar))
+    ), tablas_limpiar)
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'success': True, 'message': 'Base de datos limpiada (solo quedan usuarios y configuración)'})
+
+
+@app.route('/api/eventos', methods=['GET'])
+def eventos_sse():
+    """Server-Sent Events para notificar cambios en ventas en tiempo real."""
+    def stream():
+        cliente = queue.Queue(maxsize=10)
+        sse_clientes.append(cliente)
+        try:
+            # Enviar evento inicial
+            yield 'data: {"evento":"conectado"}\n\n'
+            while True:
+                try:
+                    msg = cliente.get(timeout=30)
+                    yield f'data: {json.dumps(msg)}\n\n'
+                except queue.Empty:
+                    # Keep-alive cada 30 segundos
+                    yield 'data: {"evento":"ping"}\n\n'
+        finally:
+            if cliente in sse_clientes:
+                sse_clientes.remove(cliente)
+
+    return Response(stream_with_context(stream()), mimetype='text/event-stream')
 
 
 # Servir archivos estáticos del frontend

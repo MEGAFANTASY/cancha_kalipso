@@ -29,7 +29,7 @@ body {
 .header {
     background-color: var(--color-primario);
     color: var(--color-blanco);
-    padding: 15px 0;
+    padding: 0% 0;
     position: sticky;
     top: 0;
     z-index: 100;
@@ -44,10 +44,14 @@ body {
 }
 
 .logo {
-    color: var(--color-blanco);
+    display: inline-block;
     text-decoration: none;
-    font-size: 1.5rem;
-    font-weight: bold;
+}
+
+.logo img {
+    height: 85px;
+    width: auto;
+    display: block;
 }
 
 .nav a {

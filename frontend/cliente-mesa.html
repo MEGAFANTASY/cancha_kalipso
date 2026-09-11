@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mi cuenta - Cancha de Kalipso</title>
+    <link rel="stylesheet" href="css/mesero.css">
+</head>
+<body class="cliente-body">
+    <div class="cliente-card">
+        <img src="img/logo-kalipso.png" alt="Cancha de Kalipso" class="cliente-logo">
+        <h2 id="tituloMesa">Cuenta de la mesa</h2>
+        
+        <div id="estadoCuenta" class="estado-cuenta">
+            <span class="sync-indicator" id="syncIndicator">●</span>
+            <span id="estadoTexto">Actualizando...</span>
+        </div>
+
+        <div id="itemsCuenta" class="items-cuenta">
+            <p class="empty">No hay items en la cuenta.</p>
+        </div>
+
+        <div class="cliente-total">
+            <span>Total:</span>
+            <strong id="subtotalCuenta">$0,00</strong>
+        </div>
+
+        <footer class="cliente-footer">
+            <p>Cancha de Kalipso</p>
+            <small>Se actualiza automáticamente cada 5 segundos</small>
+        </footer>
+    </div>
+
+    <script src="js/cliente-mesa.js"></script>
+</body>
+</html>

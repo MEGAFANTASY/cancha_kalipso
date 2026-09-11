@@ -114,15 +114,14 @@ body {
 
 .header-title {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 0.75rem;
 }
 
-.header-brand {
-    font-weight: 800;
-    font-size: 1.25rem;
-    color: rgba(255, 255, 255, 0.95);
-    letter-spacing: 0.3px;
+.header-brand-img {
+    height: 64px;
+    width: auto;
+    display: block;
 }
 
 .header-title h1 {
@@ -313,10 +312,45 @@ button:hover {
     background: #e8f5e9;
 }
 
+.badge-caja,
+.badge-mesero {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.badge-caja {
+    background: #1976d2;
+    color: #fff;
+}
+
+.badge-mesero {
+    background: #ff9800;
+    color: #fff;
+}
+
 .filtros-reservas {
     display: flex;
     gap: 0.5rem;
     margin: 1rem 0;
+}
+
+.filtros-inventario {
+    display: flex;
+    gap: 0.5rem;
+    margin: 1rem 0;
+    flex-wrap: wrap;
+}
+
+.filtros-inventario input,
+.filtros-inventario select {
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 5px;
 }
 
 .text-right {
@@ -486,15 +520,25 @@ button:hover {
 }
 
 .card-mesa.active {
-    border-color: var(--primary);
-    background: #e8f5e9;
-    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.2);
+    border-color: #f39c12;
+    background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+    box-shadow: 0 0 0 4px rgba(243, 156, 18, 0.25);
+    transform: translateY(-2px);
 }
 
 .card-mesa.ocupada {
     background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%);
     border-color: var(--primary-light);
     color: var(--primary-dark);
+}
+
+.card-mesa.ocupada.active {
+    border-color: #f39c12;
+    border-width: 3px;
+    background: linear-gradient(135deg, #c8e6c9 0%, #ffe0b2 100%);
+    box-shadow: 0 0 0 5px rgba(243, 156, 18, 0.35);
+    transform: translateY(-2px) scale(1.02);
+    color: #d35400;
 }
 
 .mesa-info {

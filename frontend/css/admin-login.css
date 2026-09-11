@@ -48,11 +48,11 @@ body {
     border-top: 5px solid var(--primary-light);
 }
 
-.admin-login-wrapper h1.login-brand {
-    margin-bottom: 0.25rem;
-    color: var(--primary);
-    font-weight: 800;
-    font-size: 1.75rem;
+.admin-login-wrapper .login-brand-img {
+    height: 150px;
+    width: auto;
+    display: block;
+    margin: 0 auto 1rem;
 }
 
 .admin-login-wrapper h2 {
