@@ -139,21 +139,6 @@ function inicializarConfiguracion() {
         $('configModal').style.display = 'none';
     });
 
-    $('btnLimpiarDatos').addEventListener('click', async () => {
-        if (!confirm('⚠️ ¿ELIMINAR TODOS LOS DATOS?\n\nSe borrarán reservas, mesas, items, cargues y ventas.\nLos usuarios se mantienen.\n\nEsta acción no se puede deshacer.')) return;
-        
-        const r = await fetch(`${API}/limpiar_datos`, { method: 'POST' });
-        const data = await r.json();
-        alert(data.message);
-        
-        // Ocultar modal y recargar panel
-        $('configModal').style.display = 'none';
-        await cargarDatosIniciales();
-        if ($('tabConsumo').classList.contains('active')) {
-            cargarConsumo();
-        }
-    });
-
     $('formConfigUrl').addEventListener('submit', async (e) => {
         e.preventDefault();
         const url = $('gsheetsUrl').value.trim();
