@@ -18,7 +18,6 @@
             </div>
             <div class="header-actions">
                 <button class="btn-secondary" id="btnConfig">⚙ Configuración</button>
-                <button class="btn-secondary" id="btnSincronizar">🔄 Sincronizar</button>
                 <button class="btn-logout" id="btnLogout">Cerrar sesión</button>
             </div>
         </header>
@@ -28,6 +27,7 @@
             <button class="tab-btn active" data-tab="reservas">Reservas</button>
             <button class="tab-btn" data-tab="consumo">Consumo</button>
             <button class="tab-btn" data-tab="historial">Historial</button>
+            <button class="tab-btn" data-tab="inventario">Inventario</button>
         </nav>
 
         <!-- TAB RESERVAS -->
@@ -79,7 +79,7 @@
                         <div id="agregarItemBox" style="display:none;">
                             <div class="formulario-inline">
                                 <select id="selectItemConsumo"></select>
-                                <input type="number" id="cantidadItemConsumo" placeholder="Cantidad" min="0.1" step="0.1" value="1">
+                                <input type="number" id="cantidadItemConsumo" placeholder="Cantidad" min="1" step="1" value="1">
                                 <button type="button" class="btn-primary" id="btnAgregarItemConsumo">Agregar</button>
                             </div>
                         </div>
@@ -119,6 +119,36 @@
                 <div id="historialVentas"></div>
             </div>
         </section>
+
+        <!-- TAB INVENTARIO -->
+        <section id="tabInventario" class="tab-content">
+            <div class="admin-card">
+                <h2>Inventario</h2>
+                <p class="text-muted">Stock actual según cargues realizados menos ventas.</p>
+                
+                <div class="filtros-inventario">
+                    <input type="text" id="filtroNombreInventario" placeholder="Buscar por nombre">
+                    <select id="filtroCategoriaInventario">
+                        <option value="">Todas las categorías</option>
+                    </select>
+                    <button class="btn-secondary" id="btnLimpiarFiltrosInventario">Limpiar</button>
+                </div>
+                
+                <table id="tablaInventario" class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Categoría</th>
+                            <th>Cargado</th>
+                            <th>Vendido</th>
+                            <th>Stock actual</th>
+                            <th>Costo promedio</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
     </div>
 
     <!-- MODAL CONFIGURACIÓN -->
@@ -144,6 +174,16 @@
                         <input type="url" id="gsheetsUrl" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;">
                         <button type="submit" class="btn-primary">Guardar URL</button>
                     </form>
+                    
+                    <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--border);">
+                    
+                    <div class="formulario-vertical">
+                        <label class="text-danger">Zona peligrosa</label>
+                        <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                            Elimina todas las reservas, mesas, items, cargues y ventas. Los usuarios se mantienen.
+                        </p>
+                        <button type="button" class="btn-danger" id="btnLimpiarDatos">🗑️ Limpiar datos de prueba</button>
+                    </div>
                 </div>
 
                 <!-- MESAS -->
@@ -180,7 +220,6 @@
                         <input type="text" id="categoriaItem" placeholder="Categoría">
                         <input type="number" id="precioItem" placeholder="Precio venta" min="0" step="0.01" required>
                         <input type="text" id="unidadItem" placeholder="Unidad" value="unidad">
-                        <input type="number" id="stockItem" placeholder="Stock" min="0" step="0.1" value="0">
                         <button type="submit" class="btn-primary">Guardar Item</button>
                         <button type="button" class="btn-secondary" id="btnCancelarItem">Cancelar</button>
                     </form>
@@ -205,7 +244,7 @@
                     <form id="formCargue" class="formulario-inline">
                         <input type="hidden" id="idCargue">
                         <select id="itemCargue" required></select>
-                        <input type="number" id="cantidadCargue" placeholder="Cantidad" min="0.1" step="0.1" required>
+                        <input type="number" id="cantidadCargue" placeholder="Cantidad" min="1" step="1" required>
                         <input type="number" id="costoCargue" placeholder="Costo unitario" min="0" step="0.01">
                         <input type="text" id="proveedorCargue" placeholder="Proveedor">
                         <input type="date" id="fechaCargue">

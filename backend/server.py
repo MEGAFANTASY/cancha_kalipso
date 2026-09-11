@@ -552,7 +552,7 @@ def listar_items():
 def guardar_item():
     data = request.get_json()
     id_i = data.get('id_item')
-    campos = ['nombre_item', 'categoria', 'precio_venta', 'unidad', 'stock']
+    campos = ['nombre_item', 'categoria', 'precio_venta', 'unidad']
     valores = {c: data.get(c) for c in campos}
     valores['fecha_modificacion'] = data.get('fecha_modificacion') or ahora_iso()
 
@@ -561,9 +561,8 @@ def guardar_item():
 
     try:
         valores['precio_venta'] = float(valores.get('precio_venta') or 0)
-        valores['stock'] = float(valores.get('stock') or 0)
     except (ValueError, TypeError):
-        return jsonify({'success': False, 'message': 'Precio y stock deben ser números'}), 400
+        return jsonify({'success': False, 'message': 'Precio debe ser número'}), 400
 
     conn = obtener_conexion()
 
@@ -574,11 +573,13 @@ def guardar_item():
         sets = ', '.join([f'{c} = ?' for c in valores])
         conn.execute(f'UPDATE items SET {sets} WHERE id_item = ?', list(valores.values()) + [id_i])
     else:
-        cols = list(valores.keys())
-        placeholders = ','.join(['?' for _ in cols])
+        # Insertar con stock inicial 0
+        campos_insert = list(valores.keys()) + ['stock']
+        valores_insert = list(valores.values()) + [0]
+        placeholders = ','.join(['?' for _ in campos_insert])
         cursor = conn.execute(
-            f"INSERT INTO items ({', '.join(cols)}) VALUES ({placeholders})",
-            list(valores.values())
+            f"INSERT INTO items ({', '.join(campos_insert)}) VALUES ({placeholders})",
+            valores_insert
         )
         id_i = cursor.lastrowid
 
@@ -596,6 +597,22 @@ def eliminar_item(id_i):
     conn.close()
 
     return jsonify({'success': True, 'message': 'Item eliminado'})
+
+
+def recalcular_stock_item(conn, id_item):
+    """Recalcula el stock de un item desde cero: total cargues - total vendido."""
+    cargado = conn.execute(
+        'SELECT COALESCE(SUM(cantidad), 0) FROM cargues WHERE id_item = ?',
+        (id_item,)
+    ).fetchone()[0]
+    vendido = conn.execute(
+        'SELECT COALESCE(SUM(cantidad), 0) FROM venta_items WHERE id_item = ?',
+        (id_item,)
+    ).fetchone()[0]
+    conn.execute(
+        'UPDATE items SET stock = ?, fecha_modificacion = ? WHERE id_item = ?',
+        (cargado - vendido, ahora_iso(), id_item)
+    )
 
 
 # ===== CARGUES =====
@@ -617,7 +634,7 @@ def guardar_cargue():
         return jsonify({'success': False, 'message': 'Item y cantidad son obligatorios'}), 400
 
     try:
-        valores['cantidad'] = float(valores.get('cantidad'))
+        valores['cantidad'] = int(valores.get('cantidad'))
         valores['costo_unitario'] = float(valores.get('costo_unitario') or 0)
         valores['id_item'] = int(valores.get('id_item'))
     except (ValueError, TypeError):
@@ -643,6 +660,9 @@ def guardar_cargue():
         )
         id_c = cursor.lastrowid
 
+    # Recalcular stock del item desde cero
+    recalcular_stock_item(conn, valores['id_item'])
+
     conn.commit()
     conn.close()
 
@@ -652,7 +672,12 @@ def guardar_cargue():
 @app.route('/api/cargues/<int:id_c>', methods=['DELETE'])
 def eliminar_cargue(id_c):
     conn = obtener_conexion()
+    # Obtener cargue para saber qué item recalcular
+    row = conn.execute('SELECT id_item FROM cargues WHERE id_cargue = ?', (id_c,)).fetchone()
+    id_item = row['id_item'] if row else None
     conn.execute('DELETE FROM cargues WHERE id_cargue = ?', (id_c,))
+    if id_item:
+        recalcular_stock_item(conn, id_item)
     conn.commit()
     conn.close()
 
@@ -717,7 +742,7 @@ def agregar_item_venta():
         return jsonify({'success': False, 'message': 'Venta, item y cantidad son obligatorios'}), 400
 
     try:
-        cantidad = float(cantidad)
+        cantidad = int(cantidad)
         id_venta = int(id_venta)
         id_item = int(id_item)
     except (ValueError, TypeError):
@@ -725,13 +750,12 @@ def agregar_item_venta():
 
     conn = obtener_conexion()
 
-    # Verificar stock
+    # Verificar que el item existe
     item = conn.execute('SELECT * FROM items WHERE id_item = ?', (id_item,)).fetchone()
     if not item:
         return jsonify({'success': False, 'message': 'Item no encontrado'}), 404
 
-    if item['stock'] < cantidad:
-        return jsonify({'success': False, 'message': 'Stock insuficiente'}), 400
+    # Sin validación de stock - permite vender en negativo
 
     precio_unitario = float(item['precio_venta'])
     total_linea = precio_unitario * cantidad
@@ -741,12 +765,8 @@ def agregar_item_venta():
         (id_venta, id_item, cantidad, precio_unitario, total_linea, ahora_iso())
     )
 
-    # Descontar stock
-    nuevo_stock = item['stock'] - cantidad
-    conn.execute(
-        'UPDATE items SET stock = ?, fecha_modificacion = ? WHERE id_item = ?',
-        (nuevo_stock, ahora_iso(), id_item)
-    )
+    # Recalcular stock del item desde cero
+    recalcular_stock_item(conn, id_item)
 
     # Recalcular subtotal de la venta
     total = conn.execute('SELECT SUM(total_linea) FROM venta_items WHERE id_venta = ?', (id_venta,)).fetchone()[0] or 0
@@ -800,6 +820,28 @@ def actualizar_configuracion():
 def sincronizar_manual():
     sincronizar_todo()
     return jsonify({'success': True, 'message': 'Sincronización completada'})
+
+
+@app.route('/api/limpiar_datos', methods=['POST'])
+def limpiar_datos():
+    """Limpia datos de prueba excepto usuarios y configuración."""
+    conn = obtener_conexion()
+    
+    # Orden correcto por foreign keys
+    tablas_limpiar = ['venta_items', 'ventas', 'cargues', 'items', 'mesas', 'reservas']
+    
+    for tabla in tablas_limpiar:
+        conn.execute(f'DELETE FROM {tabla}')
+    
+    # Resetear secuencias de autoincremento
+    conn.execute("DELETE FROM sqlite_sequence WHERE name IN ({})".format(
+        ','.join(['?'] * len(tablas_limpiar))
+    ), tablas_limpiar)
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'success': True, 'message': 'Base de datos limpiada (solo quedan usuarios y configuración)'})
 
 
 # Servir archivos estáticos del frontend
