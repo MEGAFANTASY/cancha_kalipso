@@ -907,6 +907,38 @@ def actualizar_configuracion():
     return jsonify({'success': True, 'message': 'Configuración guardada'})
 
 
+@app.route('/api/config_web', methods=['GET'])
+def obtener_config_web():
+    config = {
+        'precio_cancha': obtener_config('precio_cancha', '80000'),
+        'horario_lv': obtener_config('horario_lv', '8:00 a.m. - 10:00 p.m.'),
+        'horario_sab': obtener_config('horario_sab', '8:00 a.m. - 11:00 p.m.'),
+        'horario_dom': obtener_config('horario_dom', '9:00 a.m. - 9:00 p.m.'),
+        'hora_inicio': obtener_config('hora_inicio', '8'),
+        'hora_fin': obtener_config('hora_fin', '22'),
+        'intervalo_minutos': obtener_config('intervalo_minutos', '60'),
+        'direccion': obtener_config('direccion', 'Calle 123 #45-67'),
+        'telefono': obtener_config('telefono', '300 123 4567'),
+        'correo': obtener_config('correo', 'reservas@canchadekalipso.com'),
+        'whatsapp': obtener_config('whatsapp', '573001234567'),
+    }
+    return jsonify(config)
+
+
+@app.route('/api/config_web', methods=['POST'])
+def actualizar_config_web():
+    data = request.get_json() or {}
+    campos = [
+        'precio_cancha', 'horario_lv', 'horario_sab', 'horario_dom',
+        'hora_inicio', 'hora_fin', 'intervalo_minutos',
+        'direccion', 'telefono', 'correo', 'whatsapp'
+    ]
+    for campo in campos:
+        if campo in data:
+            guardar_config(campo, str(data[campo]).strip())
+    return jsonify({'success': True, 'message': 'Configuración web actualizada'})
+
+
 @app.route('/api/sincronizar', methods=['POST'])
 def sincronizar_manual():
     sincronizar_todo()

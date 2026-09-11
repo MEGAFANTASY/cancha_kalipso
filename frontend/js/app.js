@@ -26,6 +26,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (existe('btnAgregarItemConsumo')) inicializarConsumo();
     if (existe('formReserva')) inicializarReservaPublica();
 
+    // Página pública: cargar config (precio, horarios, contacto) si existen los elementos
+    if (existe('precioCancha') || existe('horarioLv') || existe('datoDireccion')) {
+        cargarConfigWebPublica();
+    }
+
     conectarSSE();
 
     const esPanelAdmin = document.querySelector('.admin-container');
@@ -122,6 +127,7 @@ function inicializarConfiguracion() {
             const r = await fetch(`${API}/config`);
             const data = await r.json();
             $('gsheetsUrl').value = data.GSHEETS_URL || '';
+            await cargarWebConfig();
             await cargarMesas();
             await cargarItems();
             await cargarCargues();
@@ -154,17 +160,108 @@ function inicializarConfiguracion() {
             alert('Error guardando URL');
         }
     });
+
+    if (existe('formConfigWeb')) {
+        $('formConfigWeb').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                precio_cancha: $('webPrecioCancha').value,
+                horario_lv: $('webHorarioLv').value,
+                horario_sab: $('webHorarioSab').value,
+                horario_dom: $('webHorarioDom').value,
+                hora_inicio: $('webHoraInicio').value,
+                hora_fin: $('webHoraFin').value,
+                intervalo_minutos: $('webIntervalo').value,
+                direccion: $('webDireccion').value,
+                telefono: $('webTelefono').value,
+                correo: $('webCorreo').value,
+                whatsapp: $('webWhatsapp').value,
+            };
+            try {
+                const r = await fetch(`${API}/config_web`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await r.json();
+                alert(data.message);
+            } catch (err) {
+                alert('Error guardando configuración web');
+            }
+        });
+    }
+}
+
+async function cargarWebConfig() {
+    try {
+        const r = await fetch(`${API}/config_web`);
+        const data = await r.json();
+        if (existe('webPrecioCancha')) $('webPrecioCancha').value = data.precio_cancha || '';
+        if (existe('webHorarioLv')) $('webHorarioLv').value = data.horario_lv || '';
+        if (existe('webHorarioSab')) $('webHorarioSab').value = data.horario_sab || '';
+        if (existe('webHorarioDom')) $('webHorarioDom').value = data.horario_dom || '';
+        if (existe('webHoraInicio')) $('webHoraInicio').value = data.hora_inicio || '';
+        if (existe('webHoraFin')) $('webHoraFin').value = data.hora_fin || '';
+        if (existe('webIntervalo')) $('webIntervalo').value = data.intervalo_minutos || '';
+        if (existe('webDireccion')) $('webDireccion').value = data.direccion || '';
+        if (existe('webTelefono')) $('webTelefono').value = data.telefono || '';
+        if (existe('webCorreo')) $('webCorreo').value = data.correo || '';
+        if (existe('webWhatsapp')) $('webWhatsapp').value = data.whatsapp || '';
+    } catch (err) {
+        console.error('Error cargando config web:', err);
+    }
 }
 
 /* ============== RESERVAS PUBLICAS ================= */
-const HORAS_DISPONIBLES = [];
-for (let h = 8; h <= 22; h++) {
-    const horaStr = `${String(h).padStart(2, '0')}:00`;
-    HORAS_DISPONIBLES.push(horaStr);
+let configWebData = {};
+
+async function cargarConfigWebPublica() {
+    try {
+        const r = await fetch(`${API}/config_web`);
+        const data = await r.json();
+        configWebData = data;
+        // Precio
+        if (existe('precioCancha')) {
+            $('precioCancha').textContent = data.precio_cancha || '$80.000 / hora';
+        }
+        // Horarios
+        if (existe('horarioLv')) $('horarioLv').textContent = data.horario_lv || '8:00 a.m. - 10:00 p.m.';
+        if (existe('horarioSab')) $('horarioSab').textContent = data.horario_sab || '8:00 a.m. - 11:00 p.m.';
+        if (existe('horarioDom')) $('horarioDom').textContent = data.horario_dom || '9:00 a.m. - 9:00 p.m.';
+        // Contacto
+        if (existe('datoDireccion')) $('datoDireccion').textContent = data.direccion || 'Calle 123 #45-67';
+        if (existe('datoTelefono')) $('datoTelefono').textContent = data.telefono || '300 123 4567';
+        if (existe('datoCorreo')) $('datoCorreo').textContent = data.correo || 'reservas@canchadekalipso.com';
+        // WhatsApp
+        if (existe('linkWhatsapp')) {
+            const wa = (data.whatsapp || '573001234567').replace(/\D/g, '');
+            $('linkWhatsapp').href = `https://wa.me/${wa}?text=Hola,%20quiero%20reservar%20una%20cancha`;
+        }
+    } catch (err) {
+        console.error('Error cargando config web pública:', err);
+    }
 }
 
-function inicializarReservaPublica() {
+function reconstruirHorasDisponibles() {
+    HORAS_DISPONIBLES.length = 0;
+    const inicio = parseInt(configWebData.hora_inicio || 8);
+    const fin = parseInt(configWebData.hora_fin || 22);
+    const intervalo = parseInt(configWebData.intervalo_minutos || 60);
+    for (let h = inicio; h <= fin; h++) {
+        for (let m = 0; m < 60; m += intervalo) {
+            if (h === fin && m > 0) continue;
+            HORAS_DISPONIBLES.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+        }
+    }
+}
+
+const HORAS_DISPONIBLES = [];
+
+async function inicializarReservaPublica() {
     if (!existe('formReserva')) return;
+
+    await cargarConfigWebPublica();
+    reconstruirHorasDisponibles();
 
     const selectHora = $('hora');
     selectHora.innerHTML = '<option value="">Selecciona hora</option>';

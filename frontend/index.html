@@ -32,7 +32,7 @@
                 <article class="card">
                     <h3>Cancha Principal</h3>
                     <p>Césped sintético de alta calidad, iluminación LED y medidas reglamentarias.</p>
-                    <span class="precio">$80.000 / hora</span>
+                    <span class="precio" id="precioCancha">$80.000 / hora</span>
                 </article>
             </div>
         </div>
@@ -68,10 +68,10 @@
     <section id="horarios" class="horarios">
         <div class="container">
             <h2>Horarios de atención</h2>
-            <ul>
-                <li><strong>Lunes a Viernes:</strong> 8:00 a.m. - 10:00 p.m.</li>
-                <li><strong>Sábados:</strong> 8:00 a.m. - 11:00 p.m.</li>
-                <li><strong>Domingos y festivos:</strong> 9:00 a.m. - 9:00 p.m.</li>
+            <ul id="horariosLista">
+                <li><strong>Lunes a Viernes:</strong> <span id="horarioLv">8:00 a.m. - 10:00 p.m.</span></li>
+                <li><strong>Sábados:</strong> <span id="horarioSab">8:00 a.m. - 11:00 p.m.</span></li>
+                <li><strong>Domingos y festivos:</strong> <span id="horarioDom">9:00 a.m. - 9:00 p.m.</span></li>
             </ul>
         </div>
     </section>
@@ -80,9 +80,9 @@
         <div class="container">
             <h2>Contacto</h2>
             <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d245.79505861350486!2d-73.2808022219937!3d9.704841756589905!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1ses-419!2sco!4v1789004045917!5m2!1ses-419!2sco" width="400" height="300" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
-            <p><strong>Dirección:</strong> Calle 123 #45-67</p>
-            <p><strong>Teléfono:</strong> 300 123 4567</p>
-            <p><strong>Correo:</strong> reservas@canchadekalipso.com</p>
+            <p><strong>Dirección:</strong> <span id="datoDireccion">Calle 123 #45-67</span></p>
+            <p><strong>Teléfono:</strong> <span id="datoTelefono">300 123 4567</span></p>
+            <p><strong>Correo:</strong> <span id="datoCorreo">reservas@canchadekalipso.com</span></p>
         </div>
     </section>
 
@@ -92,7 +92,7 @@
         </div>
     </footer>
 
-    <a href="https://wa.me/573001234567?text=Hola,%20quiero%20reservar%20una%20cancha" class="whatsapp-float" target="_blank" rel="noopener noreferrer">
+    <a id="linkWhatsapp" href="https://wa.me/573001234567?text=Hola,%20quiero%20reservar%20una%20cancha" class="whatsapp-float" target="_blank" rel="noopener noreferrer">
         <img src="img/icon-whatsapp.png" alt="WhatsApp">
     </a>
 

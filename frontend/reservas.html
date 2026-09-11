@@ -162,6 +162,7 @@
 
             <nav class="subtabs-nav">
                 <button class="subtab-btn active" data-subtab="url">URL Google Sheets</button>
+                <button class="subtab-btn" data-subtab="web">Web pública</button>
                 <button class="subtab-btn" data-subtab="mesas">Mesas</button>
                 <button class="subtab-btn" data-subtab="items">Items</button>
                 <button class="subtab-btn" data-subtab="cargues">Cargues</button>
@@ -176,6 +177,51 @@
                         <button type="submit" class="btn-primary">Guardar URL</button>
                     </form>
                     
+                </div>
+
+                <!-- WEB PUBLICA -->
+                <div id="subtabWeb" class="subtab-content">
+                    <form id="formConfigWeb" class="formulario-vertical">
+                        <h3>Datos de la cancha</h3>
+                        <label>Precio por hora</label>
+                        <input type="text" id="webPrecioCancha" placeholder="Ej: $80.000 / hora">
+
+                        <h3 style="margin-top:1rem;">Horarios de atención</h3>
+                        <label>Lunes a Viernes</label>
+                        <input type="text" id="webHorarioLv" placeholder="Ej: 8:00 a.m. - 10:00 p.m.">
+                        <label>Sábados</label>
+                        <input type="text" id="webHorarioSab" placeholder="Ej: 8:00 a.m. - 11:00 p.m.">
+                        <label>Domingos y festivos</label>
+                        <input type="text" id="webHorarioDom" placeholder="Ej: 9:00 a.m. - 9:00 p.m.">
+
+                        <h3 style="margin-top:1rem;">Rangos de reserva</h3>
+                        <div class="formulario-inline">
+                            <div>
+                                <label>Hora inicio</label>
+                                <input type="number" id="webHoraInicio" min="0" max="23" required>
+                            </div>
+                            <div>
+                                <label>Hora fin</label>
+                                <input type="number" id="webHoraFin" min="1" max="24" required>
+                            </div>
+                            <div>
+                                <label>Intervalo (min)</label>
+                                <input type="number" id="webIntervalo" min="15" step="5" required>
+                            </div>
+                        </div>
+
+                        <h3 style="margin-top:1rem;">Contacto</h3>
+                        <label>Dirección</label>
+                        <input type="text" id="webDireccion" placeholder="Ej: Calle 123 #45-67">
+                        <label>Teléfono</label>
+                        <input type="text" id="webTelefono" placeholder="Ej: 300 123 4567">
+                        <label>Correo electrónico</label>
+                        <input type="email" id="webCorreo" placeholder="Ej: reservas@canchadekalipso.com">
+                        <label>WhatsApp (solo números, con código de país)</label>
+                        <input type="text" id="webWhatsapp" placeholder="Ej: 573001234567">
+
+                        <button type="submit" class="btn-primary" style="margin-top:1rem;">Guardar configuración web</button>
+                    </form>
                 </div>
 
                 <!-- MESAS -->
