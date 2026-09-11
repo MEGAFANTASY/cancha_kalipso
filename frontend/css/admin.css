@@ -114,15 +114,14 @@ body {
 
 .header-title {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 0.75rem;
 }
 
-.header-brand {
-    font-weight: 800;
-    font-size: 1.25rem;
-    color: rgba(255, 255, 255, 0.95);
-    letter-spacing: 0.3px;
+.header-brand-img {
+    height: 64px;
+    width: auto;
+    display: block;
 }
 
 .header-title h1 {
