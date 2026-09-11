@@ -26,6 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (existe('btnAgregarItemConsumo')) inicializarConsumo();
     if (existe('formReserva')) inicializarReservaPublica();
 
+    conectarSSE();
+
     const esPanelAdmin = document.querySelector('.admin-container');
     if (esPanelAdmin) {
         if (localStorage.getItem('autenticado') !== 'true') {
@@ -102,8 +104,14 @@ async function cargarDatosIniciales() {
         cargarReservasAdmin(),
         cargarMesas(),
         cargarItems(),
-        cargarCargues()
+        cargarCargues(),
+        cargarVentasAbiertas(),
+        cargarVentaItems()
     ]);
+    // Si estamos en la pestaña de consumo, renderizar mesas
+    if (document.querySelector('.tab-btn[data-tab="consumo"]')?.classList.contains('active')) {
+        renderizarMesas();
+    }
 }
 
 /* ============== CONFIGURACIÓN ============== */
@@ -528,6 +536,8 @@ async function cargarItems() {
     // Poblar selects de cargues y consumo
     const optCargue = existe('itemCargue') ? $('itemCargue') : null;
     const optConsumo = existe('selectItemConsumo') ? $('selectItemConsumo') : null;
+    const valorCargue = optCargue ? optCargue.value : '';
+    const valorConsumo = optConsumo ? optConsumo.value : '';
     if (optCargue) optCargue.innerHTML = '<option value="">Seleccione item</option>';
     if (optConsumo) optConsumo.innerHTML = '<option value="">Seleccione item</option>';
     itemsData.forEach(i => {
@@ -545,6 +555,13 @@ async function cargarItems() {
             optConsumo.appendChild(opt2);
         }
     });
+    // Restaurar valores si siguen existiendo
+    if (optCargue && valorCargue && itemsData.some(i => String(i.id_item) === valorCargue)) {
+        optCargue.value = valorCargue;
+    }
+    if (optConsumo && valorConsumo && itemsData.some(i => String(i.id_item) === valorConsumo)) {
+        optConsumo.value = valorConsumo;
+    }
 }
 
 window.editarItem = (id) => {
@@ -676,7 +693,7 @@ function inicializarConsumo() {
         const r = await fetch(`${API}/venta_items`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id_venta: ventaActiva.id_venta, id_item, cantidad })
+            body: JSON.stringify({ id_venta: ventaActiva.id_venta, id_item, cantidad, agregado_por: 'caja' })
         });
         const data = await r.json();
         if (data.success) {
@@ -709,22 +726,46 @@ function inicializarConsumo() {
     });
 }
 
-async function cargarConsumo() {
-    await Promise.all([cargarMesas(), cargarItems()]);
-
+async function cargarVentasAbiertas() {
     const r = await fetch(`${API}/ventas_abiertas`);
     const data = await r.json();
     ventasData = data.ventas;
-    ventaItemsData = data.items;
+    return ventasData;
+}
+
+async function cargarVentaItems() {
+    // Solo cargar items de ventas abiertas
+    const r = await fetch(`${API}/ventas_abiertas`);
+    const data = await r.json();
+    ventaItemsData = data.items || [];
+    return ventaItemsData;
+}
+
+async function cargarConsumo() {
+    await Promise.all([cargarMesas(), cargarItems(), cargarVentasAbiertas(), cargarVentaItems()]);
 
     renderizarMesas();
     if (ventaActiva) {
-        const v = ventasData.find(x => x.id_venta === ventaActiva.id_venta);
-        if (v) {
-            renderizarCuenta(v);
+        if (ventaActiva.id_venta) {
+            const v = ventasData.find(x => x.id_venta === ventaActiva.id_venta);
+            if (v) {
+                renderizarCuenta(v);
+            } else {
+                ventaActiva = null;
+                limpiarCuenta();
+            }
         } else {
-            ventaActiva = null;
-            limpiarCuenta();
+            // Mesa libre seleccionada pero sin venta - mantener esa vista
+            const mesa = mesasData.find(m => m.id_mesa === ventaActiva.id_mesa);
+            if (mesa) {
+                limpiarCuenta();
+                $('tituloCuenta').textContent = `Mesa: ${escapeHtml(mesa.nombre_mesa)}`;
+                $('agregarItemBox').style.display = 'block';
+                $('btnCerrarMesa').disabled = true;
+            } else {
+                ventaActiva = null;
+                limpiarCuenta();
+            }
         }
     }
 }
@@ -897,6 +938,7 @@ function renderizarCuenta(venta) {
             <td>${formatearEntero(i.cantidad)}</td>
             <td>${formatearPrecio(i.precio_unitario)}</td>
             <td>${formatearPrecio(i.total_linea)}</td>
+            <td class="text-center"><span class="badge-${(i.agregado_por || 'caja').toLowerCase()}" title="Agregado por ${escapeHtml(i.agregado_por || 'caja')}">${escapeHtml(i.agregado_por || 'caja')}</span></td>
         `;
         tbody.appendChild(tr);
     });
@@ -976,6 +1018,55 @@ function formatearFecha(fecha) {
     if (!fecha) return '';
     const d = new Date(fecha);
     return d.toLocaleString('es-CO');
+}
+
+function conectarSSE() {
+    if (typeof EventSource === 'undefined') return;
+    let sse = null;
+    const connect = () => {
+        if (sse) sse.close();
+        sse = new EventSource(`${API}/eventos`);
+        sse.onmessage = (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                if (data.evento === 'ventas_actualizadas') {
+                    refrescarDatosVenta();
+                }
+            } catch (err) {
+                console.error('SSE parse error:', err);
+            }
+        };
+        sse.onerror = () => {
+            if (sse) sse.close();
+            setTimeout(connect, 5000);
+        };
+    };
+    connect();
+}
+
+async function refrescarDatosVenta() {
+    await cargarVentasAbiertas();
+    await cargarVentaItems();
+    renderizarMesas();
+    if (ventaActiva) {
+        if (ventaActiva.id_venta) {
+            const v = ventasData.find(x => x.id_venta === ventaActiva.id_venta);
+            if (v) {
+                renderizarCuenta(v);
+            } else {
+                limpiarCuenta();
+                ventaActiva = null;
+                renderizarMesas();
+            }
+        } else {
+            // Mesa seleccionada pero sin venta aún - no hacer nada, mantener estado
+            const mesa = mesasData.find(m => m.id_mesa === ventaActiva.id_mesa);
+            if (!mesa) {
+                ventaActiva = null;
+                limpiarCuenta();
+            }
+        }
+    }
 }
 
 function formatearEntero(n) {

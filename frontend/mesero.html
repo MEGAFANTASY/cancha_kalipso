@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Caja Móvil - Cancha de Kalipso</title>
+    <link rel="stylesheet" href="css/mesero.css">
+</head>
+<body>
+    <!-- LOGIN -->
+    <div id="loginView" class="mobile-view">
+        <div class="login-card">
+            <img src="img/logo-kalipso.png" alt="Cancha de Kalipso" class="login-logo">
+            <h2>Acceso meseros</h2>
+            <form id="loginForm" class="login-form">
+                <input type="text" id="usuario" placeholder="Usuario" required autocomplete="username">
+                <input type="password" id="password" placeholder="Contraseña" required autocomplete="current-password">
+                <p id="loginError" class="login-error"></p>
+                <button type="submit" class="btn btn-primary btn-block">Iniciar sesión</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- POS MÓVIL -->
+    <div id="posView" class="mobile-view hidden">
+        <header class="mobile-header">
+            <div class="header-info">
+                <span class="sync-indicator" id="syncIndicator">●</span>
+                <span id="userName">Mesero</span>
+            </div>
+            <button id="btnLogout" class="btn btn-small">Salir</button>
+        </header>
+
+        <main class="pos-container">
+            <!-- Panel superior: mesas -->
+            <section class="mesas-section">
+                <h3>Mesas</h3>
+                <div id="mesasGrid" class="mesas-grid"></div>
+            </section>
+
+            <!-- Panel inferior: cuenta activa -->
+            <section class="cuenta-section">
+                <div class="cuenta-header">
+                    <h3 id="tituloCuenta">Selecciona una mesa</h3>
+                    <span id="subtotalCuenta" class="subtotal">$0,00</span>
+                </div>
+
+                <div id="itemsCuenta" class="items-cuenta">
+                    <p class="empty">Ninguna mesa seleccionada</p>
+                </div>
+
+                <div id="agregarBox" class="agregar-box hidden">
+                    <select id="selectItem"></select>
+                    <div class="cantidad-row">
+                        <button type="button" id="btnMenos" class="btn btn-round">−</button>
+                        <input type="number" id="cantidadItem" value="1" min="1" step="1" inputmode="numeric">
+                        <button type="button" id="btnMas" class="btn btn-round">+</button>
+                    </div>
+                    <button type="button" id="btnAgregarItem" class="btn btn-primary btn-block">Agregar a la cuenta</button>
+                </div>
+
+                <div class="acciones-cuenta">
+                    <button type="button" id="btnCerrarMesa" class="btn btn-success btn-block hidden">Cerrar mesa</button>
+                    <button type="button" id="btnCancelarSeleccion" class="btn btn-secondary btn-block hidden">Cancelar selección</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="js/mesero.js"></script>
+</body>
+</html>

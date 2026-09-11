@@ -312,6 +312,27 @@ button:hover {
     background: #e8f5e9;
 }
 
+.badge-caja,
+.badge-mesero {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.badge-caja {
+    background: #1976d2;
+    color: #fff;
+}
+
+.badge-mesero {
+    background: #ff9800;
+    color: #fff;
+}
+
 .filtros-reservas {
     display: flex;
     gap: 0.5rem;
